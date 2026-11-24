@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>Manutenção por sala · Telemetria Local</title>
+<style><!--APP_STYLE-->
+#reason{width:100%;min-width:0}#reason-label{flex:1 1 16rem}
+#agenda td:nth-child(4){white-space:normal;overflow-wrap:anywhere;min-width:9rem}
+iframe{width:100%;height:46rem;border:1px solid #b6c6bd;border-radius:8px}
+#feedback{min-height:1.2em}#clock{font-variant-numeric:tabular-nums}
+</style></head><body><header><div><strong>Telemetria Local</strong><a id="home" href="/" hidden>Monitor ao vivo</a><span id="offline" hidden>Demonstração offline</span></div></header>
+<main><h1>Manutenção por sala</h1><p class="sub">Programe uma intervenção e acompanhe sua relação com as quedas de comunicação. Horários em UTC.</p>
+<section class="panel" id="demo" hidden><h2>Ensaio com duas salas</h2><p>Às 13h55, a sala-01 tem uma troca de bateria prevista das 14h às 14h20. Você pode alterar o cenário cancelando ou agendando janelas. Avance para ver a queda das 14h05 às 14h27 nas duas salas.</p>
+<button type="button" id="advance">Avançar até 14h27 e abrir relatório</button> <button type="button" id="restart">Reiniciar demonstração</button></section>
+<section class="panel"><h2>Agendar manutenção</h2>
+<form class="filters" id="schedule"><label>Sala<select id="room" required></select></label>
+<label class="date">Início (UTC)<input id="start" type="datetime-local" step="1" required></label>
+<label class="date">Fim exclusivo (UTC)<input id="end" type="datetime-local" step="1" required></label>
+<label id="reason-label">Motivo<input id="reason" type="text" maxlength="160" required placeholder="Ex.: troca de bateria"></label>
+<button class="primary" id="save">Agendar</button></form><p id="feedback" role="status"></p></section>
+<section class="panel"><div class="top"><h2>Agenda das salas</h2><button id="refresh">Atualizar</button></div>
+<p class="meta" id="clock"></p><div class="scroll"><table><thead><tr><th>Sala</th><th>Início (UTC)</th><th>Fim (UTC)</th><th>Motivo</th><th>Situação</th><th>Cancelamento</th></tr></thead><tbody id="agenda"></tbody></table></div></section>
+<p id="message" role="alert"></p><a id="history" href="/historico" hidden>Consultar disponibilidade, linha do tempo e CSV</a>
+<section class="panel" id="report-panel" hidden><h2>Resultado do ensaio</h2><p>Compare as duas salas, selecione um período e exporte o resumo no painel abaixo.</p><iframe id="report" title="Histórico e disponibilidade das salas"></iframe></section>
+<noscript>Ative o JavaScript para agendar e comparar as salas.</noscript></main>
+<script type="application/json" id="bootstrap"><!--APP_DATA--></script><script><!--APP_SCRIPT--></script></body></html>

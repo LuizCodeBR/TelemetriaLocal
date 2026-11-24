@@ -1,0 +1,278 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>Manutenção por sala · Telemetria Local</title>
+<style>:root{--ink:#18372f;--muted:#49635a;--line:#cedbd3;--paper:#fff;--brand:#00674f;--bg:#f2f5f0;--outage:#f5ddca;--blind:#e1e5e7;color:var(--ink);background:var(--bg);font:16px/1.5 "Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}body{margin:0}header{background:#163a32;color:white}header>div,main{width:min(1110px,92%);margin:auto}header>div{display:flex;justify-content:space-between;align-items:center;min-height:54px;gap:1rem}header strong{letter-spacing:.03em}header a{color:#e0f1e9}main{padding:clamp(1.2rem,4vw,3rem) 0 3rem}
+h1{font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.055em;line-height:1.08;margin:0}h2{font-size:1.14rem;margin:0}p{margin:.4rem 0}.sub,small,.legend,#result,.meta{color:var(--muted)}.sub{margin:.45rem 0 1.6rem}.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:clamp(.82rem,2.4vw,1.45rem);margin:.85rem 0}.filters{display:flex;flex-wrap:wrap;align-items:end;gap:.75rem}label{display:grid;gap:.22rem;font-weight:650;font-size:.83rem}input,select,button{font:inherit;border:1px solid #96ada2;border-radius:6px;background:#fff;color:var(--ink);padding:.48rem .68rem;min-height:40px}input,select{max-width:100%;min-width:0}button{cursor:pointer;font-weight:600}button.primary{background:var(--brand);border-color:var(--brand);color:white}button:disabled{opacity:.55;cursor:default}:focus-visible{outline:3px solid #187bba;outline-offset:2px}
+.top,.bottom{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}.legend{display:flex;flex-wrap:wrap;gap:.45rem 1.05rem;font-size:.83rem;margin:.65rem 0}.key{display:inline-block;vertical-align:middle;width:.85rem;height:.7rem;margin-right:.32rem;border-radius:2px}.temp{background:var(--brand);border-radius:100%;width:.57rem;height:.57rem}.down{background:var(--outage);border-left:2px solid #a94a10}.blind{background:repeating-linear-gradient(135deg,#dce1e5 0 3px,#87969b 3px 4px)}.up{width:.65rem;border-left:3px dashed #13644b}
+canvas{display:block;width:100%;height:245px;cursor:crosshair}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}td,th{white-space:nowrap;text-align:left;padding:.55rem .5rem;border-bottom:1px solid #e1e8e2}thead th{color:var(--muted);font-size:.8rem}.reading{min-height:0;color:var(--brand);background:none;border:none;padding:.18rem 0;text-decoration:underline;text-underline-offset:3px}.bottom{margin-top:.75rem}#detail{background:#f1f7f3;border-left:3px solid var(--brand);padding:.55rem .8rem}#message{color:#913f19;font-weight:600}#message:empty{display:none}[hidden]{display:none!important}#result{font-size:.91rem}.page-nav{display:flex;align-items:center;gap:.55rem}
+@media(max-width:600px){main,header>div{width:94%}.filters>label{width:calc(50% - .4rem)}.filters .date{width:100%}.filters .primary{flex:1}canvas{height:205px}.panel{border-radius:9px}.sub{margin-bottom:1rem}header>div{font-size:.89rem}}
+
+#reason{width:100%;min-width:0}#reason-label{flex:1 1 16rem}
+#agenda td:nth-child(4){white-space:normal;overflow-wrap:anywhere;min-width:9rem}
+iframe{width:100%;height:46rem;border:1px solid #b6c6bd;border-radius:8px}
+#feedback{min-height:1.2em}#clock{font-variant-numeric:tabular-nums}
+</style></head><body><header><div><strong>Telemetria Local</strong><a id="home" href="/" hidden>Monitor ao vivo</a><span id="offline" hidden>Demonstração offline</span></div></header>
+<main><h1>Manutenção por sala</h1><p class="sub">Programe uma intervenção e acompanhe sua relação com as quedas de comunicação. Horários em UTC.</p>
+<section class="panel" id="demo" hidden><h2>Ensaio com duas salas</h2><p>Às 13h55, a sala-01 tem uma troca de bateria prevista das 14h às 14h20. Você pode alterar o cenário cancelando ou agendando janelas. Avance para ver a queda das 14h05 às 14h27 nas duas salas.</p>
+<button type="button" id="advance">Avançar até 14h27 e abrir relatório</button> <button type="button" id="restart">Reiniciar demonstração</button></section>
+<section class="panel"><h2>Agendar manutenção</h2>
+<form class="filters" id="schedule"><label>Sala<select id="room" required></select></label>
+<label class="date">Início (UTC)<input id="start" type="datetime-local" step="1" required></label>
+<label class="date">Fim exclusivo (UTC)<input id="end" type="datetime-local" step="1" required></label>
+<label id="reason-label">Motivo<input id="reason" type="text" maxlength="160" required placeholder="Ex.: troca de bateria"></label>
+<button class="primary" id="save">Agendar</button></form><p id="feedback" role="status"></p></section>
+<section class="panel"><div class="top"><h2>Agenda das salas</h2><button id="refresh">Atualizar</button></div>
+<p class="meta" id="clock"></p><div class="scroll"><table><thead><tr><th>Sala</th><th>Início (UTC)</th><th>Fim (UTC)</th><th>Motivo</th><th>Situação</th><th>Cancelamento</th></tr></thead><tbody id="agenda"></tbody></table></div></section>
+<p id="message" role="alert"></p><a id="history" href="/historico" hidden>Consultar disponibilidade, linha do tempo e CSV</a>
+<section class="panel" id="report-panel" hidden><h2>Resultado do ensaio</h2><p>Compare as duas salas, selecione um período e exporte o resumo no painel abaixo.</p><iframe id="report" title="Histórico e disponibilidade das salas"></iframe></section>
+<noscript>Ative o JavaScript para agendar e comparar as salas.</noscript></main>
+<script type="application/json" id="bootstrap">{"agenda": {"origin": "874d5b7cb37f7ad963009480b4c9d100", "now": "2026-01-15T13:55:00.000000+00:00", "rooms": ["sala-01", "sala-02"], "windows": [{"key": "11111111111111111111111111111111", "sensor": "sala-01", "start": "2026-01-15T14:00:00.000000+00:00", "end": "2026-01-15T14:20:00.000000+00:00", "reason": "Troca de bateria", "created_at": "2026-01-15T13:55:00.000000+00:00", "canceled_at": null}]}, "example": {"start": "2026-01-15T14:00:00.000000+00:00", "end": "2026-01-15T14:27:01.000000+00:00", "availability": {"rooms": [{"sensor": "sala-01", "evaluated": [["2026-01-15T14:00:00.000000+00:00", "2026-01-15T14:27:01.000000+00:00"]], "outages": [["2026-01-15T14:05:00.000000+00:00", "2026-01-15T14:27:00.000000+00:00"]], "maintenance": [{"start": "2026-01-15T14:00:00.000000+00:00", "end": "2026-01-15T14:20:00.000000+00:00", "reason": "Troca de bateria"}]}, {"sensor": "sala-02", "evaluated": [["2026-01-15T14:00:00.000000+00:00", "2026-01-15T14:27:01.000000+00:00"]], "outages": [["2026-01-15T14:05:00.000000+00:00", "2026-01-15T14:27:00.000000+00:00"]]}], "blind": []}, "data": {"sala-01": {"sensor": "sala-01", "start": "2026-01-15T14:00:00.000000+00:00", "end": "2026-01-15T14:27:01.000000+00:00", "rows": [{"id": "5a0acb710a6844a0bb07f680ecc0e836", "measured_at": "2026-01-15T14:27:00.000000+00:00", "received_at": "2026-11-19T00:39:22.313284+00:00", "temperature": 25.35, "humidity": 58.91}], "events": [{"start": "2026-01-15T14:05:00.000000+00:00", "until": "2026-01-15T14:27:00.000000+00:00", "outcome": "retomada"}], "gaps": [], "freshness": [{"start": "2026-01-15T13:55:15.000000+00:00", "until": "2026-01-15T14:27:01.000000+00:00", "outcome": "sem_observacao"}]}, "sala-02": {"sensor": "sala-02", "start": "2026-01-15T14:00:00.000000+00:00", "end": "2026-01-15T14:27:01.000000+00:00", "rows": [{"id": "d4eec193363c497ca0d65a179fd4e0f3", "measured_at": "2026-01-15T14:27:00.000000+00:00", "received_at": "2026-11-19T00:39:22.319382+00:00", "temperature": 25.35, "humidity": 58.91}], "events": [{"start": "2026-01-15T14:05:00.000000+00:00", "until": "2026-01-15T14:27:00.000000+00:00", "outcome": "retomada"}], "gaps": [], "freshness": [{"start": "2026-01-15T13:55:15.000000+00:00", "until": "2026-01-15T14:27:01.000000+00:00", "outcome": "sem_observacao"}]}}}, "start": "2026-01-15T14:00:00.000000+00:00", "end": "2026-01-15T14:20:00.000000+00:00", "reportPrefix": "\u003c!doctype html>\n\u003chtml lang=\"pt-BR\">\u003chead>\u003cmeta charset=\"utf-8\">\u003cmeta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n\u003cmeta name=\"color-scheme\" content=\"light\">\u003ctitle>Histórico por sensor · Telemetria Local\u003c/title>\n\u003cstyle>:root{--ink:#18372f;--muted:#49635a;--line:#cedbd3;--paper:#fff;--brand:#00674f;--bg:#f2f5f0;--outage:#f5ddca;--blind:#e1e5e7;color:var(--ink);background:var(--bg);font:16px/1.5 \"Segoe UI\",Roboto,sans-serif}\n*{box-sizing:border-box}body{margin:0}header{background:#163a32;color:white}header>div,main{width:min(1110px,92%);margin:auto}header>div{display:flex;justify-content:space-between;align-items:center;min-height:54px;gap:1rem}header strong{letter-spacing:.03em}header a{color:#e0f1e9}main{padding:clamp(1.2rem,4vw,3rem) 0 3rem}\nh1{font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.055em;line-height:1.08;margin:0}h2{font-size:1.14rem;margin:0}p{margin:.4rem 0}.sub,small,.legend,#result,.meta{color:var(--muted)}.sub{margin:.45rem 0 1.6rem}.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:clamp(.82rem,2.4vw,1.45rem);margin:.85rem 0}.filters{display:flex;flex-wrap:wrap;align-items:end;gap:.75rem}label{display:grid;gap:.22rem;font-weight:650;font-size:.83rem}input,select,button{font:inherit;border:1px solid #96ada2;border-radius:6px;background:#fff;color:var(--ink);padding:.48rem .68rem;min-height:40px}input,select{max-width:100%;min-width:0}button{cursor:pointer;font-weight:600}button.primary{background:var(--brand);border-color:var(--brand);color:white}button:disabled{opacity:.55;cursor:default}:focus-visible{outline:3px solid #187bba;outline-offset:2px}\n.top,.bottom{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}.legend{display:flex;flex-wrap:wrap;gap:.45rem 1.05rem;font-size:.83rem;margin:.65rem 0}.key{display:inline-block;vertical-align:middle;width:.85rem;height:.7rem;margin-right:.32rem;border-radius:2px}.temp{background:var(--brand);border-radius:100%;width:.57rem;height:.57rem}.down{background:var(--outage);border-left:2px solid #a94a10}.blind{background:repeating-linear-gradient(135deg,#dce1e5 0 3px,#87969b 3px 4px)}.up{width:.65rem;border-left:3px dashed #13644b}\ncanvas{display:block;width:100%;height:245px;cursor:crosshair}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}td,th{white-space:nowrap;text-align:left;padding:.55rem .5rem;border-bottom:1px solid #e1e8e2}thead th{color:var(--muted);font-size:.8rem}.reading{min-height:0;color:var(--brand);background:none;border:none;padding:.18rem 0;text-decoration:underline;text-underline-offset:3px}.bottom{margin-top:.75rem}#detail{background:#f1f7f3;border-left:3px solid var(--brand);padding:.55rem .8rem}#message{color:#913f19;font-weight:600}#message:empty{display:none}[hidden]{display:none!important}#result{font-size:.91rem}.page-nav{display:flex;align-items:center;gap:.55rem}\n@media(max-width:600px){main,header>div{width:94%}.filters>label{width:calc(50% - .4rem)}.filters .date{width:100%}.filters .primary{flex:1}canvas{height:205px}.panel{border-radius:9px}.sub{margin-bottom:1rem}header>div{font-size:.89rem}}\n\u003c/style>\u003c/head>\u003cbody>\n\u003cheader>\u003cdiv>\u003cstrong>Telemetria Local\u003c/strong>\u003ca id=\"home\" href=\"/\" hidden>Monitor ao vivo\u003c/a>\u003cspan id=\"offline\" hidden>Demonstração offline\u003c/span>\u003c/div>\u003c/header>\n\u003cmain>\u003ch1>Histórico por sensor\u003c/h1>\u003cp class=\"sub\">Temperatura e comunicação ao longo do tempo. Todos os horários em UTC.\u003c/p>\n\u003csection class=\"panel\" aria-label=\"Filtros\">\u003cform id=\"filters\" class=\"filters\">\n\u003clabel>Sensor\u003cselect id=\"sensor\">\u003c/select>\u003c/label>\u003clabel>Período\u003cselect id=\"preset\">\u003coption value=\"1\">Última hora\u003c/option>\u003coption value=\"24\">Últimas 24 horas\u003c/option>\u003coption value=\"custom\">Personalizado\u003c/option>\u003c/select>\u003c/label>\n\u003clabel class=\"date\">Início (UTC)\u003cinput id=\"start\" type=\"datetime-local\" step=\"any\">\u003c/label>\n\u003clabel class=\"date\">Fim exclusivo (UTC)\u003cinput id=\"end\" type=\"datetime-local\" step=\"any\">\u003c/label>\n\u003cbutton id=\"apply\" class=\"primary\">Aplicar\u003c/button>\u003c/form>\u003cp id=\"message\" role=\"alert\">\u003c/p>\u003c/section>\n\u003csection class=\"panel\" aria-labelledby=\"availability-title\">\n\u003cdiv class=\"top\">\u003ch2 id=\"availability-title\">Disponibilidade de comunicação\u003c/h2>\u003cbutton id=\"availability-csv\" disabled>Exportar resumo CSV\u003c/button>\u003c/div>\n\u003cp class=\"meta\" id=\"availability-period\" role=\"status\">\u003c/p>\n\u003cp>\u003csmall>Disponibilidade = tempo em comunicação ÷ tempo avaliado. Selecione uma sala para abrir o histórico no mesmo período.\u003c/small>\u003c/p>\n\u003cdiv class=\"scroll\">\u003ctable>\u003cthead>\u003ctr>\u003cth scope=\"col\">Sala\u003c/th>\u003cth scope=\"col\">Disponibilidade\u003c/th>\u003cth scope=\"col\">Avaliado\u003c/th>\u003cth scope=\"col\">Em comunicação\u003c/th>\u003cth scope=\"col\">Em interrupção\u003c/th>\u003cth scope=\"col\">Maior interrupção\u003c/th>\u003cth scope=\"col\">Central sem observação\u003c/th>\u003cth scope=\"col\">Evidência insuficiente\u003c/th>\u003cth scope=\"col\">Interrupção em manutenção\u003c/th>\u003cth scope=\"col\">Interrupção fora da manutenção\u003c/th>\u003c/tr>\u003c/thead>\u003ctbody id=\"availability-rows\">\u003c/tbody>\u003c/table>\u003c/div>\n\u003csmall>As duas últimas colunas dividem a interrupção observada. Uma manutenção pode transcorrer com o sensor em comunicação. Central sem observação indica uma pausa registrada. Evidência insuficiente inclui o tempo antes do primeiro sinal ou fora da cobertura conhecida.\u003c/small>\n\u003c/section>\n\u003csection class=\"panel\">\u003cdiv class=\"top\">\u003cdiv>\u003ch2 id=\"chart-title\" tabindex=\"-1\">Temperatura e comunicação\u003c/h2>\u003cp id=\"result\" role=\"status\">\u003c/p>\u003c/div>\u003cbutton id=\"csv\" disabled>Exportar CSV\u003c/button>\u003c/div>\n\u003cdiv class=\"legend\" aria-label=\"Legenda\">\u003cspan>\u003ci class=\"key temp\">\u003c/i>Temperatura (°C)\u003c/span>\u003cspan>\u003ci class=\"key down\">\u003c/i>Interrupção do sensor\u003c/span>\u003cspan>\u003ci class=\"key up\">\u003c/i>Retomada\u003c/span>\u003cspan>\u003ci class=\"key\" style=\"background:#68529a\">\u003c/i>Manutenção programada\u003c/span>\u003cspan>\u003ci class=\"key blind\">\u003c/i>Central sem observação\u003c/span>\u003cspan>\u003ci class=\"key\" style=\"background:#9e4422\">\u003c/i>Medição desatualizada\u003c/span>\u003c/div>\n\u003ccanvas id=\"chart\" role=\"img\" aria-label=\"Temperaturas nos horários de medição e eventos no mesmo eixo UTC. Dados nas tabelas abaixo.\">\u003c/canvas>\n\u003cp id=\"detail\" role=\"status\" hidden>\u003c/p>\u003cbutton id=\"next-point\" type=\"button\" hidden>Próxima medição deste ponto\u003c/button>\u003c/section>\n\u003csection class=\"panel\">\u003ch2>Eventos da sala\u003c/h2>\u003csmall>O gráfico recorta as faixas no período escolhido. A tabela preserva os horários originais.\u003c/small>\u003cdiv class=\"scroll\">\u003ctable>\u003cthead>\u003ctr>\u003cth>Evento\u003c/th>\u003cth>Início (UTC)\u003c/th>\u003cth>Fim ou última observação (UTC)\u003c/th>\u003c/tr>\u003c/thead>\u003ctbody id=\"events\">\u003c/tbody>\u003c/table>\u003c/div>\u003c/section>\n\u003csection class=\"panel\">\u003ch2>Medições\u003c/h2>\u003cdiv class=\"scroll\">\u003ctable>\u003cthead>\u003ctr>\u003cth>Medido em (UTC)\u003c/th>\u003cth>Temperatura (°C)\u003c/th>\u003cth>Umidade (%)\u003c/th>\u003cth>Recebido em (UTC)\u003c/th>\u003c/tr>\u003c/thead>\u003ctbody id=\"readings\">\u003c/tbody>\u003c/table>\u003c/div>\n\u003cdiv class=\"bottom\">\u003csmall>Selecione uma medição para ver o detalhe.\u003c/small>\u003cdiv class=\"page-nav\">\u003cbutton id=\"prev\" disabled>Anterior\u003c/button>\u003csmall id=\"pagination\">\u003c/small>\u003cbutton id=\"next\" disabled>Próxima\u003c/button>\u003c/div>\u003c/div>\u003c/section>\n\u003cnoscript>Ative o JavaScript do navegador para consultar os dados e exportar o CSV.\u003c/noscript>\u003c/main>\n\u003cscript type=\"application/json\" id=\"bootstrap\">", "reportSuffix": "\u003c/script>\u003cscript>\"use strict\";\nconst el = id => document.getElementById(id);\n\nfunction utcInput(value) {\n  if (!/^\\d{4}-\\d\\d-\\d\\dT\\d\\d:\\d\\d(:\\d\\d(\\.\\d{1,6})?)?$/.test(value) || value.startsWith(\"0000\")) {\n    throw new Error(\"Informe uma data e hora válida em UTC.\");\n  }\n  const [whole, fraction = \"\"] = value.split(\".\");\n  return (whole.length === 16 ? whole + \":00\" : whole) + \".\" + fraction.padEnd(6, \"0\") + \"+00:00\";\n}\nfunction wholeMillis(iso) {\n  return Date.parse(iso.slice(0,23) + \"Z\");\n}\nfunction labelTime(iso) {\n  const [date, hour] = iso.split(\"T\");\n  const time = hour.split(\"+\")[0].replace(/0+$/, \"\").replace(/\\.$/, \"\");\n  return date.split(\"-\").reverse().join(\"/\") + \" \" + time;\n}\nfunction showRange(start, end) {\n  el(\"start\").value = start.slice(0,23);\n  el(\"end\").value = end.slice(0,23);\n}\n\nfunction addCells(body, values) {\n  const row = body.insertRow();\n  for (const value of values) {\n    const cell = row.insertCell();\n    if (value instanceof Node) cell.append(value);\n    else cell.textContent = value;\n  }\n}\nfunction emptyRow(body, count, message) {\n  const cell = body.insertRow().insertCell();\n  cell.colSpan = count;\n  cell.textContent = message;\n}\n\nfunction safeSensor(name) {\n  return name.startsWith(\"-\") ? \"'\" + name : name;\n}\nfunction csvBlob(header, records) {\n  const parts = [\"\\uFEFF\"];\n  let lines = [header];\n  function flush() {\n    parts.push(lines.map(line => line.map(cell => '\"' + cell.replace(/\"/g,'\"\"') + '\"').join(\";\")).join(\"\\r\\n\") + \"\\r\\n\");\n    lines = [];\n  }\n  for (const record of records) {\n    lines.push(record);\n    if (lines.length === 1024) flush();\n  }\n  if (lines.length) flush();\n  return new Blob(parts, {type:\"text/csv;charset=utf-8\"});\n}\nfunction downloadCsv(header, records, prefix, period) {\n  const url = URL.createObjectURL(csvBlob(header, records));\n  const a = document.createElement(\"a\");\n  const fileTime = iso => iso.slice(0,26).replaceAll(\":\",\"-\") + \"Z\";\n  a.href = url; a.download = prefix + \"_\" + fileTime(period.start) + \"_\" + fileTime(period.end) + \".csv\";\n  document.body.append(a); a.click(); a.remove();\n  setTimeout(() => URL.revokeObjectURL(url), 2000);\n}\n\nfunction micros(iso) {\n  return BigInt(wholeMillis(iso))*1000n + BigInt(iso.slice(23,26));\n}\n// Os intervalos de cada lista são ordenados e não se sobrepõem. O fim é exclusivo.\nfunction maintenanceOverlap(outages, windows, start, end) {\n  let total = 0n, i = 0, j = 0;\n  while (i \u003c outages.length && j \u003c windows.length) {\n    const [down, back] = outages[i], window = windows[j];\n    const left = [down, window.start, start].sort().at(-1);\n    const right = [back, window.end, end].sort()[0];\n    if (left \u003c right) total += micros(right) - micros(left);\n    if (back \u003c= window.end) i++;\n    else j++;\n  }\n  return total;\n}\nfunction seconds(us) {\n  const fraction = String(us % 1000000n).padStart(6,\"0\").replace(/0+$/, \"\");\n  return String(us / 1000000n) + (fraction ? \",\" + fraction : \"\");\n}\n\n\"use strict\";\nconst boot = JSON.parse(document.getElementById(\"bootstrap\").textContent);\nconst form = el(\"filters\");\nconst preset = el(\"preset\");\nconst sensor = el(\"sensor\");\nconst chart = el(\"chart\");\nconst pageSize = 30;\nlet view = null, pageIndex = 0, generation = 0, pending = null;\nlet plotted = null;\n\nfunction filterExample(name, start, end) {\n  const source = boot.example.data[name];\n  const from = start \u003c boot.example.start ? boot.example.start : start;\n  const to = end > boot.example.end ? boot.example.end : end;\n  const result = {sensor:name, start, end, coverage:{start:from,end:to}, availability:boot.example.availability, rows:[], events:[], gaps:[]};\n  if (from >= to) return result;\n  result.rows = source.rows.filter(r => from \u003c= r.measured_at && r.measured_at \u003c to);\n  result.events = source.events.filter(e => e.start \u003c to &&\n    (e.until > from || e.start >= from || (e.until === from && e.outcome === \"retomada\")));\n  result.freshness = (source.freshness || []).filter(e => e.start \u003c to &&\n    (e.until > from || e.start >= from || (e.until === from && e.outcome === \"atualizada\")));\n  result.gaps = source.gaps.filter(g => g.start \u003c to && g.until > from);\n  return result;\n}\nfunction numeric(n) { return String(n).replace(\".\", \",\"); }\nfunction detail(row, group = null, index = 0) {\n  const next = el(\"next-point\");\n  next.hidden = !group || group.length \u003c 2;\n  next.onclick = next.hidden ? null : () => {\n    const i = (index + 1) % group.length;\n    detail(group[i], group, i);\n  };\n  const position = next.hidden ? \"\" : \" · Medição \" + (index+1) + \" de \" + group.length + \" neste ponto\";\n  el(\"detail\").hidden = false;\n  el(\"detail\").textContent = [view.sensor + position, \"Medição \" + labelTime(row.measured_at) + \" UTC\",\n    numeric(row.temperature) + \" °C\", numeric(row.humidity) + \"% de umidade\",\n    \"Recebimento \" + labelTime(row.received_at) + \" UTC\", \"ID \" + row.id].join(\" · \");\n}\nfunction table() {\n  const body = el(\"readings\");\n  body.replaceChildren();\n  const rows = view ? view.rows : [];\n  const lastPage = Math.max(0, Math.ceil(rows.length / pageSize) - 1);\n  pageIndex = Math.min(pageIndex, lastPage);\n  const first = pageIndex * pageSize;\n  for (const row of rows.slice(first, first + pageSize)) {\n    const button = document.createElement(\"button\");\n    button.className = \"reading\";\n    button.textContent = labelTime(row.measured_at);\n    button.onclick = () => detail(row);\n    addCells(body, [button, numeric(row.temperature), numeric(row.humidity), labelTime(row.received_at)]);\n  }\n  if (!rows.length) emptyRow(body, 4, \"Nenhuma medição neste recorte.\");\n  el(\"prev\").disabled = pageIndex === 0;\n  el(\"next\").disabled = pageIndex >= lastPage;\n  el(\"pagination\").textContent = rows.length ? (first + 1) + \"–\" + Math.min(first + pageSize, rows.length) + \" de \" + rows.length : \"0 medições\";\n}\nfunction selectedWindows() {\n  if (!view) return [];\n  const bounds = view.coverage || view;\n  const windows = view.availability?.rooms.find(room => room.sensor === view.sensor)?.maintenance || [];\n  return windows.filter(w => bounds.start \u003c bounds.end && w.start \u003c bounds.end && w.end > bounds.start);\n}\nfunction eventTable() {\n  const body = el(\"events\");\n  body.replaceChildren();\n  const labels = {retomada:\"Interrupção com retomada\", sem_observacao:\"Interrupção até a perda de observação\"};\n  const entries = view ? view.events.map(e => ({\n    ...e, label: e.until >= (view.coverage || view).end ? \"Interrupção no período\" : labels[e.outcome] || \"Interrupção em aberto\"\n  })).concat(view.gaps.map(g => ({...g, label: g.ongoing ? \"Central sem observação (em andamento)\" : \"Central sem observação\"}))) : [];\n  for (const e of view?.freshness || []) {\n    let label = \"Medição desatualizada no período\";\n    if (e.until \u003c (view.coverage || view).end) {\n      if (e.outcome === \"atualizada\") label = \"Medição desatualizada com recuperação\";\n      if (e.outcome === \"sem_observacao\") label = \"Medição desatualizada até o fim da observação\";\n    }\n    entries.push({...e,label});\n  }\n  for (const w of selectedWindows()) entries.push({label:\"Manutenção · \" + w.reason, start:w.start, until:w.end});\n  entries.sort((a,b) => a.start.localeCompare(b.start));\n  for (const e of entries) addCells(body, [e.label, labelTime(e.start), labelTime(e.until)]);\n  if (!entries.length) emptyRow(body, 3, \"Nenhum evento registrado neste recorte.\");\n}\nfunction draw() {\n  const width = chart.clientWidth, height = chart.clientHeight;\n  if (!width || !height) return;\n  const ratio = window.devicePixelRatio || 1;\n  chart.width = Math.round(width * ratio);\n  chart.height = Math.round(height * ratio);\n  const ctx = chart.getContext(\"2d\");\n  ctx.scale(ratio,ratio);\n  plotted = null;\n  if (!view) return;\n  const originMs = wholeMillis(view.start);\n  const originUs = Number(view.start.slice(23,26));\n  const elapsed = iso => (wholeMillis(iso) - originMs) + (Number(iso.slice(23,26)) - originUs) / 1000;\n  const span = elapsed(view.end);\n  const left = 48, right = width - 12, top = 12, bottom = height - 33;\n  const position = fraction => left + fraction * (right - left);\n  const x = iso => position(elapsed(iso) / span);\n  const bounds = view.coverage || view;\n  const bandLeft = x(bounds.start), bandRight = x(bounds.end);\n  let low = Infinity, high = -Infinity;\n  for (const row of view.rows) {low = Math.min(low, row.temperature); high = Math.max(high, row.temperature);}\n  if (!view.rows.length) {low = 0; high = 1;}\n  const pad = Math.max(.25, (high - low) * .15);\n  low -= pad; high += pad;\n  const y = temp => bottom - (temp - low) / (high - low) * (bottom - top);\n  ctx.save(); ctx.beginPath(); ctx.rect(left, top, right-left, bottom-top); ctx.clip();\n  for (const gap of view.gaps) {\n    const a = Math.max(bandLeft,x(gap.start)), b = Math.min(bandRight,x(gap.until));\n    ctx.fillStyle = \"#e1e5e7\"; ctx.fillRect(a,top,b-a,bottom-top);\n    ctx.save();ctx.beginPath();ctx.rect(a,top,b-a,bottom-top);ctx.clip();\n    ctx.strokeStyle = \"#b5c1c5\";ctx.beginPath();\n    for (let p = a - height; p \u003c b; p += 10) {ctx.moveTo(p,bottom);ctx.lineTo(p+height,top);}\n    ctx.stroke();ctx.restore();\n  }\n  for (const event of view.events) {\n    const a = x(event.start), b = x(event.until);\n    ctx.fillStyle = \"#f5ddca\";\n    const bandStart = Math.max(bandLeft,a);\n    ctx.fillRect(bandStart,top,Math.max(0,Math.min(bandRight,b)-bandStart),bottom-top);\n    if (event.start >= bounds.start) {\n      ctx.strokeStyle = \"#a94a10\";ctx.beginPath();ctx.moveTo(a,top);ctx.lineTo(a,bottom);ctx.stroke();\n    }\n    if (event.outcome === \"retomada\" && event.until >= bounds.start && event.until \u003c bounds.end) {\n      ctx.setLineDash([4,3]);ctx.strokeStyle = \"#13644b\";ctx.lineWidth = 2;\n      ctx.beginPath();ctx.moveTo(Math.max(left+1,b),top);ctx.lineTo(Math.max(left+1,b),bottom);ctx.stroke();\n      ctx.setLineDash([]);ctx.lineWidth = 1;\n    }\n  }\n  for (const w of selectedWindows()) {\n    const a = Math.max(bandLeft, x(w.start)), b = Math.min(bandRight, x(w.end));\n    ctx.fillStyle = \"#68529a\";\n    ctx.fillRect(a,top,Math.max(0,b-a),5);\n  }\n  for (const event of view.freshness || []) {\n    const a = Math.max(bandLeft,x(event.start)), b = Math.min(bandRight,x(event.until));\n    ctx.fillStyle = \"#9e4422\";\n    ctx.fillRect(a,bottom-5,Math.max(1,b-a),5);\n  }\n  ctx.restore();ctx.font = \"12px system-ui\";\n  for (let i=0;i\u003c4;i++) {\n    const v = low + (high-low)*i/3, pos = y(v);\n    ctx.strokeStyle = \"#abbbb375\";ctx.beginPath();ctx.moveTo(left,pos);ctx.lineTo(right,pos);ctx.stroke();\n    if (view.rows.length) {\n      ctx.fillStyle = \"#49635a\";ctx.textAlign = \"right\";\n      ctx.fillText(v.toFixed(1).replace(\".\",\",\"),left-7,pos+4);\n    }\n  }\n  ctx.fillStyle = \"#00674f\";\n  for (const row of view.rows) {\n    ctx.beginPath();ctx.arc(x(row.measured_at),y(row.temperature),view.rows.length > 500 ? 1.5 : 3,0,2*Math.PI);ctx.fill();\n  }\n  if (!view.rows.length) {ctx.fillStyle=\"#49635a\";ctx.textAlign=\"left\";ctx.fillText(\"Sem medições\",left+8,top+20);}\n  const divisions = width >= 680 ? 4 : 2;\n  function tick(fraction) {\n    const deltaUs = originUs + Math.round(span * 1000 * fraction);\n    const iso = new Date(originMs + Math.floor(deltaUs/1000)).toISOString();\n    if (span >= 86400000) return iso.slice(8,10)+\"/\"+iso.slice(5,7)+\" \"+iso.slice(11,16);\n    if (span / divisions >= 1000) return iso.slice(11,19);\n    const subMs = String(deltaUs % 1000).padStart(3,\"0\");\n    return iso.slice(11,23) + (span / divisions \u003c 1 ? subMs : \"\");\n  }\n  ctx.fillStyle = \"#49635a\";\n  for (let i=0; i\u003c=divisions; i++) {\n    const fraction = i / divisions;\n    ctx.textAlign = i === 0 ? \"left\" : i === divisions ? \"right\" : \"center\";\n    ctx.fillText(tick(fraction), position(fraction), height-9);\n  }\n  plotted = {x, y};\n}\nchart.onclick = event => {\n  if (!view || !plotted) return;\n  const rect = chart.getBoundingClientRect();\n  let best = null, distance = 14;\n  for (const row of view.rows) {\n    const d = Math.hypot(event.clientX - rect.left - plotted.x(row.measured_at),\n                         event.clientY - rect.top - plotted.y(row.temperature));\n    if (d \u003c distance) {distance = d; best = row;}\n  }\n  if (best) {\n    const px = Math.round(plotted.x(best.measured_at)), py = Math.round(plotted.y(best.temperature));\n    const group = view.rows.filter(r => Math.round(plotted.x(r.measured_at)) === px && Math.round(plotted.y(r.temperature)) === py);\n    detail(group[0], group);\n  }\n};\nfunction* readingRecords(data) {\n  for (const r of data.rows) yield [safeSensor(data.sensor), r.id, r.measured_at, r.received_at, numeric(r.temperature), numeric(r.humidity)];\n}\nel(\"csv\").onclick = () => {\n  if (view) downloadCsv([\"sensor\",\"id\",\"medido_em_utc\",\"recebido_em_utc\",\"temperatura_c\",\"umidade_pct\"],\n                        readingRecords(view), \"telemetria-\" + view.sensor, view);\n};\n\nfunction availabilityPercent(online, evaluated) {\n  if (evaluated === 0n) return \"\";\n  if (online === 0n) return \"0\";\n  if (online === evaluated) return \"100\";\n  // Acrescenta precisão quando o arredondamento ocultaria uma ocorrência real.\n  let scale = 10n, digits = 1;\n  let rounded;\n  while (true) {\n    rounded = (online * 100n * scale + evaluated / 2n) / evaluated;\n    if (rounded !== 0n && rounded !== 100n * scale) break;\n    scale *= 10n;\n    digits++;\n  }\n  const fraction = String(rounded % scale).padStart(digits, \"0\").replace(/0+$/, \"\");\n  return String(rounded / scale) + (fraction ? \",\" + fraction : \"\");\n}\nfunction availabilityRows(data) {\n  if (!data || !data.availability) return [];\n  const duration = micros(data.end) - micros(data.start);\n  const bounds = data.coverage || data;\n  function overlap([start,end]) {\n    const left = start > bounds.start ? start : bounds.start;\n    const right = end \u003c bounds.end ? end : bounds.end;\n    return left \u003c right ? micros(right) - micros(left) : 0n;\n  }\n  const sum = intervals => intervals.reduce((total, interval) => total + overlap(interval), 0n);\n  const blind = sum(data.availability.blind);\n  return data.availability.rooms.map(room => {\n    const evaluated = sum(room.evaluated);\n    let offline = 0n, longest = 0n;\n    for (const interval of room.outages) {\n      const value = overlap(interval);\n      offline += value;\n      if (value > longest) longest = value;\n    }\n    const planned = maintenanceOverlap(room.outages, room.maintenance || [], bounds.start, bounds.end);\n    const online = evaluated - offline;\n    const percent = availabilityPercent(online, evaluated);\n    return {sensor:room.sensor, percent, evaluated, online, offline, planned, outside:offline-planned, longest, blind, unknown:duration-evaluated-blind};\n  });\n}\nasync function openRoom(name, data) {\n  if (name !== data.sensor) {\n    if (!Array.from(sensor.options).some(option => option.value === name)) sensor.add(new Option(name,name));\n    sensor.value = name;\n    preset.value = \"custom\";\n    showRange(data.start, data.end);\n    await loadPeriod();\n  }\n  if (view && view.sensor === name && view.start === data.start && view.end === data.end) el(\"chart-title\").focus();\n}\nlet comparison = [];\nfunction comparisonTable(data) {\n  comparison = availabilityRows(data);\n  const body = el(\"availability-rows\");\n  body.replaceChildren();\n  el(\"availability-csv\").disabled = !comparison.length;\n  el(\"availability-period\").textContent = data ? labelTime(data.start) + \" a \" + labelTime(data.end) + \" UTC\" : \"\";\n  if (!comparison.length) emptyRow(body, 10, data ? \"Sem salas com histórico disponível.\" : \"Aguardando o período aplicado.\");\n  for (const r of comparison) {\n    const button = document.createElement(\"button\");\n    button.className = \"reading\";\n    button.textContent = r.sensor;\n    button.onclick = () => openRoom(r.sensor, data);\n    addCells(body, [button, r.percent ? r.percent + \"%\" : \"Sem dados suficientes\",\n      ...[r.evaluated,r.online,r.offline,r.longest,r.blind,r.unknown,r.planned,r.outside].map(us => seconds(us)+\" s\")]);\n  }\n}\nel(\"availability-csv\").onclick = () => {\n  if (!view || !comparison.length) return;\n  const rows = comparison.map(r => [safeSensor(r.sensor),view.start,view.end,r.percent,\n    ...[r.evaluated,r.online,r.offline,r.longest,r.blind,r.unknown,r.planned,r.outside].map(seconds)]);\n  downloadCsv([\"sensor\",\"inicio_utc\",\"fim_exclusivo_utc\",\"disponibilidade_pct\",\"avaliado_s\",\"em_comunicacao_s\",\n    \"em_interrupcao_s\",\"maior_interrupcao_s\",\"central_sem_observacao_s\",\"evidencia_insuficiente_s\",\n    \"interrupcao_em_manutencao_s\",\"interrupcao_fora_de_manutencao_s\"],rows,\"disponibilidade\",view);\n};\nfunction setRooms(names, selected) {\n  const current = Array.from(sensor.options, option => option.value);\n  if (names.length !== current.length || names.some((name, i) => name !== current[i])) {\n    sensor.replaceChildren();\n    for (const name of names) sensor.add(new Option(name, name));\n  }\n  if (names.includes(selected)) sensor.value = selected;\n}\nfunction display(data) {\n  if (!boot.example && data && data.availability) {\n    setRooms(data.availability.rooms.map(room => room.sensor), data.sensor);\n  }\n  view = data; pageIndex = 0; el(\"detail\").hidden = true;\n  el(\"next-point\").hidden = true; el(\"next-point\").onclick = null;\n  el(\"csv\").disabled = !data;\n  el(\"result\").textContent = data ? data.sensor + \" · \" + labelTime(data.start) + \" a \" + labelTime(data.end) + \" UTC · \" + data.rows.length + \" medições\" : \"\";\n  if (data && boot.example && (data.start \u003c boot.example.start || data.end > boot.example.end)) {\n    el(\"result\").textContent += \" · O exemplo contém dados de \" + labelTime(boot.example.start) + \" a \" + labelTime(boot.example.end) + \" UTC.\";\n  }\n  comparisonTable(data); table(); eventTable(); draw();\n}\nasync function loadPeriod() {\n  const order = ++generation;\n  if (pending) pending.abort();\n  display(null);el(\"message\").textContent = \"\";\n  try {\n    if (!boot.example) pending = new AbortController();\n    if (!sensor.value && !boot.example) {\n      const response = await fetch(\"/api/sensores\", {signal:pending.signal, cache:\"no-store\"});\n      if (!response.ok) throw new Error(\"Falha ao consultar as salas. Tente aplicar o filtro novamente.\");\n      const names = await response.json();\n      if (order !== generation) return;\n      setRooms(names, sensor.value);\n    }\n    if (!sensor.value) {\n      el(\"result\").textContent = \"Aguardando sensores. Use Aplicar após o primeiro sinal.\";\n      return;\n    }\n    const relative = preset.value !== \"custom\";\n    const params = new URLSearchParams({sensor:sensor.value});\n    let start, end;\n    if (!relative) {\n      start = utcInput(el(\"start\").value); end = utcInput(el(\"end\").value);\n      if (start >= end) throw new Error(\"O fim deve ser posterior ao início.\");\n      params.set(\"inicio\", start); params.set(\"fim\", end);\n    } else if (boot.example) {\n      const anchor = wholeMillis(boot.example.end);\n      start = utcInput(new Date(anchor - Number(preset.value)*3600000).toISOString().slice(0,-1));\n      end = utcInput(new Date(anchor).toISOString().slice(0,-1));\n    } else params.set(\"periodo\", preset.value + \"h\");\n    let data;\n    if (boot.example) data = filterExample(sensor.value,start,end);\n    else {\n      el(\"result\").textContent = \"Consultando o histórico…\";\n      const response = await fetch(\"/api/historico?\" + params, {signal:pending.signal,cache:\"no-store\"});\n      if (!response.ok) throw new Error(\"A consulta falhou. Confira o período e a conexão com a central.\");\n      data = await response.json();\n    }\n    if (order === generation) {\n      if (relative) showRange(data.start, data.end);\n      display(data);\n    }\n  } catch (err) {\n    if (order === generation) {display(null); el(\"message\").textContent = err.message;}\n  }\n}\nsetRooms(boot.sensors, null);\nif (boot.example) {\n  el(\"offline\").hidden = false; preset.value = \"custom\";\n  showRange(boot.example.start, boot.example.initialEnd || boot.example.end);\n} else el(\"home\").hidden = false;\nsensor.onchange = loadPeriod;\nfunction editPeriod() {\n  preset.value = \"custom\"; generation++; if (pending) pending.abort(); display(null);\n  el(\"message\").textContent = \"\";\n  el(\"result\").textContent = \"Aplique o período selecionado.\";\n}\npreset.onchange = () => {if (preset.value === \"custom\") editPeriod(); else loadPeriod();};\nfor (const id of [\"start\",\"end\"]) el(id).oninput = editPeriod;\nform.onsubmit = event => {event.preventDefault();loadPeriod();};\nel(\"prev\").onclick = () => {pageIndex--;table();};\nel(\"next\").onclick = () => {pageIndex++;table();};\nwindow.addEventListener(\"resize\",draw);\nloadPeriod();\n\u003c/script>\u003c/body>\u003c/html>\n"}</script><script>"use strict";
+const el = id => document.getElementById(id);
+
+function utcInput(value) {
+  if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d{1,6})?)?$/.test(value) || value.startsWith("0000")) {
+    throw new Error("Informe uma data e hora válida em UTC.");
+  }
+  const [whole, fraction = ""] = value.split(".");
+  return (whole.length === 16 ? whole + ":00" : whole) + "." + fraction.padEnd(6, "0") + "+00:00";
+}
+function wholeMillis(iso) {
+  return Date.parse(iso.slice(0,23) + "Z");
+}
+function labelTime(iso) {
+  const [date, hour] = iso.split("T");
+  const time = hour.split("+")[0].replace(/0+$/, "").replace(/\.$/, "");
+  return date.split("-").reverse().join("/") + " " + time;
+}
+function showRange(start, end) {
+  el("start").value = start.slice(0,23);
+  el("end").value = end.slice(0,23);
+}
+
+function addCells(body, values) {
+  const row = body.insertRow();
+  for (const value of values) {
+    const cell = row.insertCell();
+    if (value instanceof Node) cell.append(value);
+    else cell.textContent = value;
+  }
+}
+function emptyRow(body, count, message) {
+  const cell = body.insertRow().insertCell();
+  cell.colSpan = count;
+  cell.textContent = message;
+}
+
+function safeSensor(name) {
+  return name.startsWith("-") ? "'" + name : name;
+}
+function csvBlob(header, records) {
+  const parts = ["\uFEFF"];
+  let lines = [header];
+  function flush() {
+    parts.push(lines.map(line => line.map(cell => '"' + cell.replace(/"/g,'""') + '"').join(";")).join("\r\n") + "\r\n");
+    lines = [];
+  }
+  for (const record of records) {
+    lines.push(record);
+    if (lines.length === 1024) flush();
+  }
+  if (lines.length) flush();
+  return new Blob(parts, {type:"text/csv;charset=utf-8"});
+}
+function downloadCsv(header, records, prefix, period) {
+  const url = URL.createObjectURL(csvBlob(header, records));
+  const a = document.createElement("a");
+  const fileTime = iso => iso.slice(0,26).replaceAll(":","-") + "Z";
+  a.href = url; a.download = prefix + "_" + fileTime(period.start) + "_" + fileTime(period.end) + ".csv";
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function micros(iso) {
+  return BigInt(wholeMillis(iso))*1000n + BigInt(iso.slice(23,26));
+}
+// Os intervalos de cada lista são ordenados e não se sobrepõem. O fim é exclusivo.
+function maintenanceOverlap(outages, windows, start, end) {
+  let total = 0n, i = 0, j = 0;
+  while (i < outages.length && j < windows.length) {
+    const [down, back] = outages[i], window = windows[j];
+    const left = [down, window.start, start].sort().at(-1);
+    const right = [back, window.end, end].sort()[0];
+    if (left < right) total += micros(right) - micros(left);
+    if (back <= window.end) i++;
+    else j++;
+  }
+  return total;
+}
+function seconds(us) {
+  const fraction = String(us % 1000000n).padStart(6,"0").replace(/0+$/, "");
+  return String(us / 1000000n) + (fraction ? "," + fraction : "");
+}
+
+"use strict";
+const sample = JSON.parse(el("bootstrap").textContent);
+let agenda, busy = false, pending = null, generation = 0;
+
+// Uma chave representa um envio até a central confirmar o resultado.
+let unresolved = new Map();
+function signature(data) {
+  return JSON.stringify([data.origin,data.sensor,data.start,data.end,data.reason]);
+}
+function storeAttempts(origin) {
+  if (sample) return;
+  try {
+    const name = "telemetria.manutencao." + origin;
+    if (unresolved.size) sessionStorage.setItem(name,JSON.stringify([...unresolved.values()]));
+    else sessionStorage.removeItem(name);
+  } catch { /* Sem armazenamento de sessão, os reenvios funcionam em memória. */ }
+}
+function loadAttempts(origin) {
+  unresolved = new Map();
+  try {
+    const entries = JSON.parse(sessionStorage.getItem("telemetria.manutencao." + origin) || "[]");
+    for (const entry of entries) {
+      if (entry?.origin === origin && /^[0-9a-f]{32}$/.test(entry.key) &&
+          [entry.sensor,entry.start,entry.end,entry.reason].every(s => typeof s === "string"))
+        unresolved.set(signature(entry),entry);
+    }
+  } catch { /* A primeira consulta também funciona sem dados salvos. */ }
+}
+function renderAgenda() {
+  const selected = el("room").value;
+  if (JSON.stringify(Array.from(el("room").options,o => o.value)) !== JSON.stringify(agenda.rooms)) {
+    el("room").replaceChildren(...agenda.rooms.map(name => new Option(name,name)));
+    if (agenda.rooms.includes(selected)) el("room").value = selected;
+  }
+  el("clock").textContent = "Relógio da central · " + labelTime(agenda.now) + " UTC";
+  const table = el("agenda");
+  table.replaceChildren();
+  for (const w of [...agenda.windows].sort((a,b) => a.start.localeCompare(b.start) || a.sensor.localeCompare(b.sensor))) {
+    const state = w.canceled_at ? "Cancelada" : agenda.now < w.start ? "Agendada" : agenda.now < w.end ? "Em manutenção" : "Encerrada";
+    let action = "—";
+    if (w.canceled_at) action = labelTime(w.canceled_at) + " UTC";
+    if (state === "Agendada") {
+      action = document.createElement("button");
+      action.textContent = "Cancelar"; action.disabled = busy;
+      action.setAttribute("aria-label","Cancelar manutenção de " + w.sensor + " às " + labelTime(w.start));
+      action.onclick = () => submit({key:w.key, origin:agenda.origin}, true);
+    }
+    addCells(table,[w.sensor,labelTime(w.start),labelTime(w.end),w.reason,state,action]);
+  }
+  if (!agenda.windows.length) emptyRow(table,6,"Nenhuma manutenção agendada.");
+  el("save").disabled = busy || !agenda.rooms.length;
+  if (!agenda.rooms.length) el("clock").textContent += " · Aguardando o primeiro sensor.";
+}
+async function refresh() {
+  const turn = ++generation;
+  try {
+    if (!sample) {
+      const response = await fetch("/api/manutencao",{cache:"no-store"});
+      if (!response.ok) throw Error("Falha ao consultar a agenda.");
+      const data = await response.json();
+      if (turn !== generation) return;
+      const first = !agenda;
+      if (first || agenda.origin !== data.origin) loadAttempts(data.origin);
+      if (!first && agenda.origin !== data.origin) {
+        el("schedule").reset(); pending = null;
+        el("feedback").textContent = "A pasta de dados mudou. Confira a sala e preencha uma nova janela.";
+      }
+      agenda = data;
+      renderAgenda();
+      if (first && unresolved.size) {
+        const saved = [...unresolved.values()].at(-1);
+        if (agenda.rooms.includes(saved.sensor)) {
+          el("room").value = saved.sensor; el("start").value = saved.start.slice(0,23);
+          el("end").value = saved.end.slice(0,23); el("reason").value = saved.reason;
+          el("feedback").textContent = "Envio sem confirmação. Confira a janela e repita o envio para consultar o resultado.";
+        }
+      }
+    } else renderAgenda();
+    el("message").textContent = "";
+  } catch (err) {if (turn === generation) el("message").textContent = err.message;}
+}
+function demoUpdate(data, cancel) {
+  if (cancel) {
+    const w = agenda.windows.find(row => row.key === data.key);
+    if (w.start <= agenda.now) throw Error("A janela já começou.");
+    w.canceled_at = agenda.now;
+  } else {
+    if (data.start <= agenda.now) throw Error("Escolha um início futuro no relógio da central.");
+    if (agenda.windows.some(w=>!w.canceled_at && w.sensor===data.sensor && w.start<data.end && w.end>data.start))
+      throw Error("A sala já tem uma janela nesse horário.");
+    agenda.windows.push({...data, created_at:agenda.now, canceled_at:null});
+  }
+}
+async function submit(data, cancel) {
+  if (busy) return;
+  busy = true; ++generation; renderAgenda(); el("feedback").textContent = "";
+  let canceledAt;
+  try {
+    if (sample) demoUpdate(data, cancel);
+    else {
+      if (!cancel) {
+        unresolved.set(signature(data),data);
+        storeAttempts(data.origin);
+      }
+      const response = await fetch("/api/manutencao" + (cancel ? "/cancelar" : ""), {
+        method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(data)});
+      if (!response.ok) {
+        const conflict = response.status === 409 ? await response.json() : null;
+        if (!cancel && (response.status === 400 || conflict?.code === "conflito_agenda")) {
+          unresolved.delete(signature(data)); storeAttempts(data.origin);
+        }
+        if (conflict) throw Error(conflict.error);
+        if (response.status === 400) throw Error("Confira a sala, o motivo e os horários informados.");
+        throw Error("Falha ao confirmar a operação. Você pode repetir o envio.");
+      }
+      const receipt = await response.json();
+      canceledAt = receipt.canceled_at;
+      if (!cancel) {unresolved.delete(signature(data)); storeAttempts(data.origin);}
+    }
+    if (!cancel) pending = null;
+    el("feedback").textContent = canceledAt ? "Este agendamento já foi cancelado em " + labelTime(canceledAt) + " UTC." :
+      cancel ? "Cancelamento registrado." : "Agendamento confirmado.";
+  } catch (err) {el("feedback").textContent = err.message;}
+  finally {busy = false; await refresh();}
+}
+el("schedule").onsubmit = event => {
+  event.preventDefault();
+  if (busy || !agenda) return;
+  try {
+    const values = {origin:agenda.origin, sensor:el("room").value,start:utcInput(el("start").value),
+                    end:utcInput(el("end").value),reason:el("reason").value.trim()};
+    if (!values.reason || /[\u0000-\u001f\u007f-\u009f]/u.test(values.reason)) throw Error("Informe um motivo em uma linha.");
+    if (values.start >= values.end) throw Error("O fim deve ser posterior ao início.");
+    const id = signature(values);
+    if (pending?.signature !== id) pending = {signature:id,key:unresolved.get(id)?.key || crypto.randomUUID().replaceAll("-","")};
+    submit({...values,key:pending.key}, false);
+  } catch (err) {el("feedback").textContent = err.message;}
+};
+function showReport() {
+  const example = structuredClone(sample.example);
+  for (const room of example.availability.rooms) {
+    room.maintenance = agenda.windows.filter(w => !w.canceled_at && w.sensor === room.sensor)
+                                     .sort((a,b) => a.start.localeCompare(b.start));
+  }
+  const payload = JSON.stringify({sensors:agenda.rooms,example}).replaceAll("<","\\u003c");
+  el("report").srcdoc = sample.reportPrefix + payload + sample.reportSuffix;
+  el("report-panel").hidden = false;
+}
+function resetDemo() {
+  generation++; pending = null; agenda = structuredClone(sample.agenda);
+  el("report-panel").hidden = true; el("report").removeAttribute("srcdoc"); el("advance").disabled = false;
+  el("schedule").reset(); el("start").value = sample.start.slice(0,19); el("end").value = sample.end.slice(0,19);
+  el("reason").value = "Troca de bateria"; el("feedback").textContent = ""; refresh();
+}
+el("refresh").onclick = () => {if (!busy) refresh();};
+if (sample) {
+  el("demo").hidden = el("offline").hidden = false;
+  el("advance").onclick = () => {agenda.now = sample.example.end; el("advance").disabled = true; renderAgenda(); showReport();};
+  el("restart").onclick = resetDemo; resetDemo();
+} else {
+  el("save").disabled = true;
+  el("home").hidden = el("history").hidden = false; refresh();
+  setInterval(() => {if (!busy && !document.hidden) refresh();},15000);
+}
+</script></body></html>

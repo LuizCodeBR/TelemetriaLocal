@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">$refresh
+<title>Telemetria Local · Monitor ambiental</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2f4ed;color:#1d3329;font:16px/1.5 "Segoe UI",Roboto,sans-serif}
+header{background:#153c32;color:#fff}header>div,main{width:min(1100px,92%);margin:auto}
+header>div{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:15px 0}
+header>div,header nav{flex-wrap:wrap}header nav{display:flex;gap:.35rem 1rem}header nav a{color:#fff}
+header strong{letter-spacing:.04em}header span{font-size:.85rem;color:#d7eadf}
+main{padding:2rem 0 3rem}h1{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;letter-spacing:-.05em;margin:0}
+h2{font-size:1.15rem;margin:0}.contact{color:#4d6456;margin:.65rem 0 1.7rem}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.cards article,.panel{border:1px solid #cfdbd1;border-radius:12px;background:#fff;padding:1.2rem}
+.cards h2{font-size:.9rem;font-weight:600;color:#486050}.cards strong{display:inline-block;font-size:clamp(1.5rem,4vw,2.55rem);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+small{color:#54675a}.panel{margin-top:15px}.panel>div:first-child{display:flex;align-items:baseline;justify-content:space-between;gap:.7rem;flex-wrap:wrap}
+canvas{display:block;width:100%;height:185px;margin-top:12px}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}
+td,th{text-align:left;padding:.72rem .5rem;border-bottom:1px solid #e0e7df;white-space:nowrap}thead th{font-size:.78rem;color:#506357}tbody th{font-weight:600}
+@media(max-width:580px){main{width:94%;padding-top:1.35rem}.cards{gap:5px}.cards article{padding:.65rem}.cards h2{font-size:.77rem}.panel{padding:.8rem}}
+.status{display:inline-block;padding:.16rem .55rem;border-radius:5px;font-weight:650}
+.offline{background:#fae0cf;color:#81370e}.online{background:#dff0e5;color:#18573b}.unknown,.waiting,.never{background:#eeebdf;color:#55492e}
+.aberta{background:#fae0cf;color:#81370e}.recuperada{background:#dff0e5;color:#18573b}.lacuna{background:#eeebdf;color:#55492e}
+details{margin-top:.8rem}summary{cursor:pointer;color:#315342;font-weight:600}details ul{padding-left:1.2rem}
+</style></head><body>
+<header><div><strong>Telemetria Local</strong>$history_link<span>$mode · Sensor simulado</span></div></header>
+<main><h1>Monitor ambiental</h1><p class="contact">$sensor · $contact</p>
+<section class="cards" aria-label="Indicadores">
+<article><h2>Temperatura</h2><strong>$temp</strong> °C</article>
+<article><h2>Umidade</h2><strong>$humidity</strong> %</article>
+<article><h2>Leituras únicas</h2><strong>$total</strong></article></section>
+<section class="panel"><div><h2>Evolução da temperatura</h2><small>$sensor · máxima por instante · °C · UTC</small></div>
+<canvas id="trend" role="img" aria-label="Temperatura máxima dos últimos 60 instantes distintos de medição do sensor."></canvas></section>
+<section class="panel" id="comunicacao"><div><h2>Comunicação dos sensores</h2><small>$presence_asof</small></div>
+<div class="scroll"><table><thead><tr><th>Sensor</th><th>Situação observada</th><th>Último sinal na central (UTC)</th><th>Atualidade da medição</th><th>Última medição válida observada (UTC)</th></tr></thead><tbody>$presence_rows</tbody></table></div>
+<h3>Interrupções e retomadas</h3><small>Horários da central em UTC · duração a partir da detecção · abertas e 50 últimas finalizadas</small>
+<div class="scroll"><table><thead><tr><th>Sensor</th><th>Resultado</th><th>Último sinal nesta janela</th><th>Detecção</th><th>Fim</th><th>Duração observada</th></tr></thead><tbody>$outages</tbody></table></div>
+<details><summary>Períodos sem observação da central</summary><ul>$blind_periods</ul></details></section>
+<section class="panel" id="ocorrencias"><div><h2>Ocorrências de temperatura</h2><small>Horários de medição em UTC</small></div>
+<p><small>Todas as abertas e as 50 últimas finalizadas. Na falta de medições, a duração vai até a última observação.</small></p>
+<div class="scroll"><table><thead><tr><th>Sensor</th><th>Situação</th><th>Início</th><th>Fim ou última medição</th><th>Duração observada</th><th>Pico</th></tr></thead><tbody>$events</tbody></table></div>
+<details><summary>Regras por sensor</summary><div class="scroll"><table><thead><tr><th>Sensor</th><th>Alta em 3 medições</th><th>Recuperação</th><th>Intervalo máximo</th><th>Última medição (UTC)</th></tr></thead><tbody>$rules</tbody></table></div></details>
+<details><summary>Lacunas entre medições · $gap_count exibidas</summary><small>Até 20 intervalos recentes.</small><ul>$gaps</ul></details>
+</section>
+<section class="panel"><div><h2>Histórico de leituras</h2><small>Até 60 medições recentes · horários em UTC</small></div><div class="scroll">
+<table><thead><tr><th>Sensor</th><th>Medido em</th><th>Temperatura</th><th>Umidade</th><th>Recebido em</th></tr></thead><tbody>$rows</tbody></table></div></section>
+</main><script>
+const points = $points;
+const chart = document.getElementById("trend");
+function draw() {
+  const w=chart.clientWidth, h=185, ratio=window.devicePixelRatio || 1;
+  chart.width=w*ratio; chart.height=h*ratio;
+  const ctx=chart.getContext("2d"); ctx.scale(ratio,ratio); ctx.font="12px system-ui";
+  if (!points.length) {ctx.fillStyle="#506357";ctx.fillText("Aguardando medições",12,56);return;}
+  const left=46, right=w-16, top=14, bottom=h-30;
+  const values=points.map(p=>p[1]), low=Math.floor(Math.min(...values))-0.5, high=Math.ceil(Math.max(...values))+0.5;
+  const first=points[0][0], last=points[points.length-1][0];
+  const x=t=> last===first ? (left+right)/2 : left+(t-first)*(right-left)/(last-first);
+  const y=v=> bottom-(v-low)*(bottom-top)/(high-low);
+  for(let i=0;i<=2;i++){const v=low+(high-low)*i/2; ctx.strokeStyle="#d9e3db";ctx.beginPath();ctx.moveTo(left,y(v));ctx.lineTo(right,y(v));ctx.stroke();
+    ctx.fillStyle="#4d6456";ctx.fillText(v.toFixed(1).replace(".",","),3,y(v)+4);}
+  ctx.strokeStyle="#08745c";ctx.lineWidth=2.3;ctx.beginPath();
+  points.forEach(([t,v],i)=>{if(i===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));});ctx.stroke();
+  ctx.fillStyle="#08745c";points.forEach(([t,v])=>{ctx.beginPath();ctx.arc(x(t),y(v),2.8,0,Math.PI*2);ctx.fill();});
+  const time=t=>new Date(t*1000).toISOString().slice(11,19);ctx.fillStyle="#4d6456";ctx.fillText(time(first),left,h-5);
+  if(first!==last){ctx.textAlign="right";ctx.fillText(time(last),right,h-5);}
+}
+draw();window.addEventListener("resize",draw);
+</script></body></html>

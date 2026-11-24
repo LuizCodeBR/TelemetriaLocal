@@ -1,0 +1,292 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>Atraso de entrega · Telemetria Local</title>
+<style>:root{--ink:#18372f;--muted:#49635a;--line:#cedbd3;--paper:#fff;--brand:#00674f;--bg:#f2f5f0;--outage:#f5ddca;--blind:#e1e5e7;color:var(--ink);background:var(--bg);font:16px/1.5 "Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}body{margin:0}header{background:#163a32;color:white}header>div,main{width:min(1110px,92%);margin:auto}header>div{display:flex;justify-content:space-between;align-items:center;min-height:54px;gap:1rem}header strong{letter-spacing:.03em}header a{color:#e0f1e9}main{padding:clamp(1.2rem,4vw,3rem) 0 3rem}
+h1{font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.055em;line-height:1.08;margin:0}h2{font-size:1.14rem;margin:0}p{margin:.4rem 0}.sub,small,.legend,#result,.meta{color:var(--muted)}.sub{margin:.45rem 0 1.6rem}.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:clamp(.82rem,2.4vw,1.45rem);margin:.85rem 0}.filters{display:flex;flex-wrap:wrap;align-items:end;gap:.75rem}label{display:grid;gap:.22rem;font-weight:650;font-size:.83rem}input,select,button{font:inherit;border:1px solid #96ada2;border-radius:6px;background:#fff;color:var(--ink);padding:.48rem .68rem;min-height:40px}input,select{max-width:100%;min-width:0}button{cursor:pointer;font-weight:600}button.primary{background:var(--brand);border-color:var(--brand);color:white}button:disabled{opacity:.55;cursor:default}:focus-visible{outline:3px solid #187bba;outline-offset:2px}
+.top,.bottom{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}.legend{display:flex;flex-wrap:wrap;gap:.45rem 1.05rem;font-size:.83rem;margin:.65rem 0}.key{display:inline-block;vertical-align:middle;width:.85rem;height:.7rem;margin-right:.32rem;border-radius:2px}.temp{background:var(--brand);border-radius:100%;width:.57rem;height:.57rem}.down{background:var(--outage);border-left:2px solid #a94a10}.blind{background:repeating-linear-gradient(135deg,#dce1e5 0 3px,#87969b 3px 4px)}.up{width:.65rem;border-left:3px dashed #13644b}
+canvas{display:block;width:100%;height:245px;cursor:crosshair}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}td,th{white-space:nowrap;text-align:left;padding:.55rem .5rem;border-bottom:1px solid #e1e8e2}thead th{color:var(--muted);font-size:.8rem}.reading{min-height:0;color:var(--brand);background:none;border:none;padding:.18rem 0;text-decoration:underline;text-underline-offset:3px}.bottom{margin-top:.75rem}#detail{background:#f1f7f3;border-left:3px solid var(--brand);padding:.55rem .8rem}#message{color:#913f19;font-weight:600}#message:empty{display:none}[hidden]{display:none!important}#result{font-size:.91rem}.page-nav{display:flex;align-items:center;gap:.55rem}
+@media(max-width:600px){main,header>div{width:94%}.filters>label{width:calc(50% - .4rem)}.filters .date{width:100%}.filters .primary{flex:1}canvas{height:205px}.panel{border-radius:9px}.sub{margin-bottom:1rem}header>div{font-size:.89rem}}
+
+#limit{width:10rem}#summary button[aria-pressed="true"]{font-weight:700}#warn{color:#883f17}
+@media(max-width:600px){.page-nav{flex-wrap:wrap}.filters>label{width:100%}}
+</style></head><body>
+<header><div><strong>Telemetria Local</strong><a id="home" href="/" hidden>Monitor ao vivo</a><span id="offline" hidden>Demonstração offline</span></div></header>
+<main><h1>Atraso de entrega</h1><p class="sub">Tempo entre a medição no sensor e o primeiro recebimento na central. Horários em UTC.</p>
+<section class="panel" aria-label="Filtros de recebimento"><form id="filters" class="filters">
+<label>Período de recebimento<select id="preset"><option value="1h">Última hora</option><option value="24h">Últimas 24 horas</option><option value="custom">Personalizado</option></select></label>
+<label class="date">Início (UTC)<input id="start" type="datetime-local" step="any"></label>
+<label class="date">Fim exclusivo (UTC)<input id="end" type="datetime-local" step="any"></label>
+<button class="primary" id="apply">Aplicar período</button></form><p id="message" role="alert"></p>
+<small id="sample-range" hidden></small></section>
+<section class="panel" aria-labelledby="summary-title"><div class="top"><h2 id="summary-title">Comparação entre salas</h2>
+<button id="summary-csv" disabled>Exportar comparação CSV</button></div>
+<p class="meta" id="period" role="status"></p>
+<label>Limite de atraso (segundos)<input id="limit" type="text" inputmode="decimal" value="10" aria-describedby="limit-help warn"></label>
+<small id="limit-help">Uma entrega no limite conta como dentro do prazo.</small><p id="warn" role="alert"></p>
+<div class="scroll"><table><thead><tr><th>Sala</th><th>Recebidas</th><th>No prazo</th><th>Acima do limite</th><th>Conferir relógio</th><th>Atraso mediano</th><th>Maior atraso</th></tr></thead><tbody id="summary"></tbody></table></div>
+<small>Selecione uma sala para ver suas entregas. Horários de medição posteriores ao recebimento ficam fora da mediana e do máximo.</small></section>
+<section class="panel" aria-labelledby="room-title"><div class="top"><h2 id="room-title" tabindex="-1">Entregas da sala</h2><button id="detail-csv" disabled>Exportar entregas CSV</button></div>
+<p id="details-status" class="meta" role="status"></p>
+<div class="scroll"><table><thead><tr><th>Recebido em (UTC)</th><th>Medido em (UTC)</th><th>Atraso</th><th>Situação</th><th>ID da medição</th></tr></thead><tbody id="details"></tbody></table></div>
+<div class="bottom"><div class="page-nav"><button id="prev" disabled>Anterior</button><small id="pagination"></small><button id="next" disabled>Próxima</button></div></div></section>
+<noscript>Ative o JavaScript para consultar as entregas e exportar o CSV.</noscript></main>
+<script type="application/json" id="bootstrap">{"start": "2026-01-15T14:00:00.000000+00:00", "end": "2026-01-15T14:00:42.000000+00:00", "rooms": [{"sensor": "sala-01", "readings": [{"id": "10b3db42f372403eb577e7555d3e0b67", "measured_at": "2026-01-15T14:00:00.000000+00:00", "received_at": "2026-01-15T14:00:00.000000+00:00"}, {"id": "03a13ce85c4742839ee7f3bf58711ccb", "measured_at": "2026-01-15T14:00:05.000000+00:00", "received_at": "2026-01-15T14:00:32.000000+00:00"}, {"id": "18944df653f6410e992a4644cf8cd934", "measured_at": "2026-01-15T14:00:10.000000+00:00", "received_at": "2026-01-15T14:00:32.000000+00:00"}, {"id": "1f0fac3ba8344f1db5faa346d4fc0db0", "measured_at": "2026-01-15T14:00:15.000000+00:00", "received_at": "2026-01-15T14:00:32.000000+00:00"}, {"id": "9acc2a1d21464f8084acd304a956d20b", "measured_at": "2026-01-15T14:00:20.000000+00:00", "received_at": "2026-01-15T14:00:32.000000+00:00"}, {"id": "ab9ad04bb1954e6982fab349ef5f9359", "measured_at": "2026-01-15T14:00:25.000000+00:00", "received_at": "2026-01-15T14:00:32.000000+00:00"}, {"id": "cdb501a782ed4cffab092be5287621cd", "measured_at": "2026-01-15T14:00:30.000000+00:00", "received_at": "2026-01-15T14:00:32.000000+00:00"}]}, {"sensor": "sala-02", "readings": [{"id": "f119f63ac3eb4da1bfdefa38579818a0", "measured_at": "2026-01-15T14:00:05.000000+00:00", "received_at": "2026-01-15T14:00:05.000000+00:00"}, {"id": "854b20c2de3c4e1fa80af1c85b44b65e", "measured_at": "2026-01-15T14:00:10.000000+00:00", "received_at": "2026-01-15T14:00:10.000000+00:00"}, {"id": "4a8e0380fafb453286945b3e34795e4a", "measured_at": "2026-01-15T14:00:15.000000+00:00", "received_at": "2026-01-15T14:00:15.000000+00:00"}, {"id": "a2499f97f7a245a4b445e336434ba18e", "measured_at": "2026-01-15T14:00:20.000000+00:00", "received_at": "2026-01-15T14:00:20.000000+00:00"}, {"id": "ea260499fbec4eb28819a8fd738a7e2d", "measured_at": "2026-01-15T14:00:25.000000+00:00", "received_at": "2026-01-15T14:00:25.000000+00:00"}, {"id": "a962f6135b7c4389b220db2fd9eb7b61", "measured_at": "2026-01-15T14:00:30.000000+00:00", "received_at": "2026-01-15T14:00:30.000000+00:00"}]}]}</script><script>"use strict";
+const el = id => document.getElementById(id);
+
+function utcInput(value) {
+  if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d{1,6})?)?$/.test(value) || value.startsWith("0000")) {
+    throw new Error("Informe uma data e hora válida em UTC.");
+  }
+  const [whole, fraction = ""] = value.split(".");
+  return (whole.length === 16 ? whole + ":00" : whole) + "." + fraction.padEnd(6, "0") + "+00:00";
+}
+function wholeMillis(iso) {
+  return Date.parse(iso.slice(0,23) + "Z");
+}
+function labelTime(iso) {
+  const [date, hour] = iso.split("T");
+  const time = hour.split("+")[0].replace(/0+$/, "").replace(/\.$/, "");
+  return date.split("-").reverse().join("/") + " " + time;
+}
+function showRange(start, end) {
+  el("start").value = start.slice(0,23);
+  el("end").value = end.slice(0,23);
+}
+
+function addCells(body, values) {
+  const row = body.insertRow();
+  for (const value of values) {
+    const cell = row.insertCell();
+    if (value instanceof Node) cell.append(value);
+    else cell.textContent = value;
+  }
+}
+function emptyRow(body, count, message) {
+  const cell = body.insertRow().insertCell();
+  cell.colSpan = count;
+  cell.textContent = message;
+}
+
+function safeSensor(name) {
+  return name.startsWith("-") ? "'" + name : name;
+}
+function csvBlob(header, records) {
+  const parts = ["\uFEFF"];
+  let lines = [header];
+  function flush() {
+    parts.push(lines.map(line => line.map(cell => '"' + cell.replace(/"/g,'""') + '"').join(";")).join("\r\n") + "\r\n");
+    lines = [];
+  }
+  for (const record of records) {
+    lines.push(record);
+    if (lines.length === 1024) flush();
+  }
+  if (lines.length) flush();
+  return new Blob(parts, {type:"text/csv;charset=utf-8"});
+}
+function downloadCsv(header, records, prefix, period) {
+  const url = URL.createObjectURL(csvBlob(header, records));
+  const a = document.createElement("a");
+  const fileTime = iso => iso.slice(0,26).replaceAll(":","-") + "Z";
+  a.href = url; a.download = prefix + "_" + fileTime(period.start) + "_" + fileTime(period.end) + ".csv";
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function micros(iso) {
+  return BigInt(wholeMillis(iso))*1000n + BigInt(iso.slice(23,26));
+}
+function seconds(us) {
+  const fraction = String(us % 1000000n).padStart(6,"0").replace(/0+$/, "");
+  return String(us / 1000000n) + (fraction ? "," + fraction : "");
+}
+
+"use strict";
+const example = JSON.parse(el("bootstrap").textContent);
+const preset = el("preset");
+const pageSize = 30;
+let view = null, rooms = [], selected = "", pageNumber = 0;
+let limit = 10000000n, generation = 0, pending = null;
+
+function readLimit() {
+  const text = el("limit").value.trim();
+  if (!/^\d{1,15}(?:[.,]\d{1,6})?$/.test(text)) return null;
+  const [whole, fraction = ""] = text.split(/[.,]/);
+  return BigInt(whole) * 1000000n + BigInt(fraction.padEnd(6, "0"));
+}
+function medianSeconds(sorted) {
+  if (!sorted.length) return "";
+  const mid = Math.floor(sorted.length / 2);
+  if (sorted.length % 2) return seconds(sorted[mid]);
+  // Duas leituras com diferença ímpar de microssegundos produzem meio microssegundo.
+  const twiceMedian = sorted[mid - 1] + sorted[mid];
+  const fraction = String(twiceMedian % 2000000n * 5n).padStart(7, "0").replace(/0+$/, "");
+  return String(twiceMedian / 2000000n) + (fraction ? "," + fraction : "");
+}
+function prepare(room, start, end) {
+  const readings = [], valid = [];
+  for (const row of room.readings) {
+    if (row.received_at < start || row.received_at >= end) continue;
+    const delay = micros(row.received_at) - micros(row.measured_at);
+    readings.push({...row, delay});
+    if (delay >= 0n) valid.push(delay);
+  }
+  valid.sort((a,b) => a < b ? -1 : a > b ? 1 : 0);
+  return {name:room.sensor, readings, valid, median:medianSeconds(valid),
+    maximum:valid.length ? seconds(valid[valid.length - 1]) : ""};
+}
+function withinLimit(sorted) {
+  let left = 0, right = sorted.length;
+  while (left < right) {
+    const mid = Math.floor((left + right) / 2);
+    if (sorted[mid] <= limit) left = mid + 1; else right = mid;
+  }
+  return left;
+}
+function statusOf(delay) {
+  if (delay < 0n) return "Conferir relógio";
+  return delay > limit ? "Acima do limite" : "No prazo";
+}
+function counts(room) {
+  const within = withinLimit(room.valid);
+  return [room.readings.length, within, room.valid.length - within, room.readings.length - room.valid.length];
+}
+function currentRoom() { return rooms.find(r => r.name === selected); }
+function showDetails() {
+  const room = currentRoom();
+  const rows = room && limit !== null ? room.readings : [];
+  const body = el("details");
+  body.replaceChildren();
+  el("room-title").textContent = room ? "Entregas · " + room.name : "Entregas da sala";
+  el("detail-csv").disabled = !rows.length;
+  const pages = Math.ceil(rows.length / pageSize);
+  el("prev").disabled = !pages || pageNumber === 0;
+  el("next").disabled = pageNumber + 1 >= pages;
+  el("pagination").textContent = pages ? "Página " + (pageNumber + 1) + " de " + pages : "";
+  el("details-status").textContent = rows.length ? rows.length + " entregas no período de recebimento." : "";
+  if (!rows.length) {
+    const waiting = room ? "Sem medições recebidas." : "Aguardando o período aplicado.";
+    emptyRow(body, 5, limit === null ? "Corrija o limite de atraso." : waiting);
+  }
+  for (const row of rows.slice(pageNumber * pageSize, (pageNumber + 1) * pageSize)) {
+    addCells(body, [labelTime(row.received_at), labelTime(row.measured_at),
+      row.delay < 0n ? "—" : seconds(row.delay) + " s", statusOf(row.delay), row.id]);
+  }
+}
+function render() {
+  limit = readLimit();
+  el("warn").textContent = limit === null ? "Informe zero ou um valor positivo, com até 15 algarismos inteiros e seis casas decimais." : "";
+  el("limit").setAttribute("aria-invalid", String(limit === null));
+  const body = el("summary");
+  body.replaceChildren();
+  el("summary-csv").disabled = !rooms.length || limit === null;
+  if (!rooms.length || limit === null) {
+    const waiting = view ? "Nenhuma sala conhecida pela central." : "Aguardando o período aplicado.";
+    emptyRow(body, 7, limit === null ? "Corrija o limite de atraso." : waiting);
+  } else {
+    for (const room of rooms) {
+      const button = document.createElement("button");
+      button.className = "reading"; button.textContent = room.name;
+      button.setAttribute("aria-pressed", String(room.name === selected));
+      button.onclick = () => {selected = room.name; pageNumber = 0; render(); el("room-title").focus();};
+      const missing = room.readings.length ? "—" : "Sem medições recebidas";
+      addCells(body, [button, ...counts(room), room.median ? room.median + " s" : missing,
+                      room.maximum ? room.maximum + " s" : "—"]);
+    }
+  }
+  showDetails();
+}
+function show(data, start, end) {
+  view = data ? {start, end} : null;
+  el("period").textContent = view ? labelTime(view.start) + " a " + labelTime(view.end) + " UTC" : "";
+  rooms = data ? data.rooms.map(room => prepare(room, start, end)) : [];
+  if (data && !currentRoom()) selected = rooms.length ? rooms[0].name : "";
+  pageNumber = 0;
+  render();
+}
+function editPeriod() {
+  generation++;
+  if (pending) pending.abort();
+  preset.value = "custom";
+  show(null);
+  el("message").textContent = "Aplique o período selecionado.";
+}
+async function loadPeriod() {
+  const order = ++generation;
+  if (pending) pending.abort();
+  el("message").textContent = "";
+  show(null);
+  try {
+    const manual = preset.value === "custom";
+    const params = new URLSearchParams();
+    let start, end;
+    if (manual) {
+      start = utcInput(el("start").value); end = utcInput(el("end").value);
+      if (start >= end) throw new Error("O fim deve ser posterior ao início.");
+      params.set("inicio", start); params.set("fim", end);
+    } else params.set("periodo", preset.value);
+    let data;
+    if (example) {
+      data = example;
+      if (!manual) {start = data.start; end = data.end;}
+      if (start < data.start || end > data.end) throw new Error("Selecione um período dentro da amostra offline.");
+    } else {
+      pending = new AbortController();
+      el("period").textContent = "Consultando as entregas…";
+      const response = await fetch("/api/entregas?" + params, {signal:pending.signal, cache:"no-store"});
+      if (!response.ok) throw new Error("Não foi possível consultar as entregas. Confira o período e a conexão.");
+      data = await response.json();
+      start = data.start; end = data.end;
+    }
+    if (order !== generation) return;
+    if (!manual) showRange(start, end);
+    show(data, start, end);
+  } catch (err) {
+    if (order === generation) {show(null); el("message").textContent = err.message;}
+  }
+}
+function* summaryRecords() {
+  for (const room of rooms) yield [safeSensor(room.name), view.start, view.end, seconds(limit),
+    ...counts(room).map(String), room.median, room.maximum];
+}
+function* detailRecords(room) {
+  for (const row of room.readings) yield [safeSensor(room.name), view.start, view.end, seconds(limit), row.id,
+    row.measured_at, row.received_at, row.delay < 0n ? "" : seconds(row.delay), statusOf(row.delay)];
+}
+function exportPrefix(name) {
+  return name + "_limite-" + seconds(limit).replace(",", ".") + "s";
+}
+const filterColumns = ["sensor","inicio_recebimento_utc","fim_exclusivo_recebimento_utc","limite_s"];
+el("summary-csv").onclick = () => {
+  if (view && rooms.length && limit !== null) downloadCsv([...filterColumns,"recebidas","no_prazo","acima_do_limite",
+    "conferir_relogio","atraso_mediano_s","maior_atraso_s"], summaryRecords(), exportPrefix("atrasos-salas"), view);
+};
+el("detail-csv").onclick = () => {
+  const room = currentRoom();
+  if (!view || !room || !room.readings.length || limit === null) return;
+  // O identificador admite maiúsculas. O Windows normalmente ignora caixa nos nomes de arquivos.
+  const fileRoom = room.name.replace(/[A-Z]/g, "~$&");
+  downloadCsv([...filterColumns,"id","medido_em_utc","recebido_em_utc","atraso_s","situacao"],
+              detailRecords(room), exportPrefix("entregas-" + fileRoom), view);
+};
+el("limit").oninput = render;
+el("filters").onsubmit = event => {event.preventDefault(); loadPeriod();};
+for (const id of ["start","end"]) el(id).oninput = editPeriod;
+preset.onchange = () => {if (preset.value === "custom") editPeriod(); else loadPeriod();};
+el("prev").onclick = () => {pageNumber--; showDetails();};
+el("next").onclick = () => {pageNumber++; showDetails();};
+if (example) {
+  preset.replaceChildren(new Option("Amostra completa", "sample"), new Option("Personalizado", "custom"));
+  el("offline").hidden = false;
+  el("sample-range").hidden = false;
+  el("sample-range").textContent = "Amostra de " + labelTime(example.start) + " a " + labelTime(example.end) + " UTC.";
+} else el("home").hidden = false;
+const incidentLink = new URLSearchParams(location.hash.slice(1));
+if (incidentLink.has("sala") && incidentLink.has("inicio") && incidentLink.has("fim")) {
+  selected = incidentLink.get("sala");
+  preset.value = "custom";
+  showRange(incidentLink.get("inicio"), incidentLink.get("fim"));
+}
+loadPeriod();
+</script></body></html>

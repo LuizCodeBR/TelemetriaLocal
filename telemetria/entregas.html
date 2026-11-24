@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>Atraso de entrega · Telemetria Local</title>
+<style><!--APP_STYLE-->
+#limit{width:10rem}#summary button[aria-pressed="true"]{font-weight:700}#warn{color:#883f17}
+@media(max-width:600px){.page-nav{flex-wrap:wrap}.filters>label{width:100%}}
+</style></head><body>
+<header><div><strong>Telemetria Local</strong><a id="home" href="/" hidden>Monitor ao vivo</a><span id="offline" hidden>Demonstração offline</span></div></header>
+<main><h1>Atraso de entrega</h1><p class="sub">Tempo entre a medição no sensor e o primeiro recebimento na central. Horários em UTC.</p>
+<section class="panel" aria-label="Filtros de recebimento"><form id="filters" class="filters">
+<label>Período de recebimento<select id="preset"><option value="1h">Última hora</option><option value="24h">Últimas 24 horas</option><option value="custom">Personalizado</option></select></label>
+<label class="date">Início (UTC)<input id="start" type="datetime-local" step="any"></label>
+<label class="date">Fim exclusivo (UTC)<input id="end" type="datetime-local" step="any"></label>
+<button class="primary" id="apply">Aplicar período</button></form><p id="message" role="alert"></p>
+<small id="sample-range" hidden></small></section>
+<section class="panel" aria-labelledby="summary-title"><div class="top"><h2 id="summary-title">Comparação entre salas</h2>
+<button id="summary-csv" disabled>Exportar comparação CSV</button></div>
+<p class="meta" id="period" role="status"></p>
+<label>Limite de atraso (segundos)<input id="limit" type="text" inputmode="decimal" value="10" aria-describedby="limit-help warn"></label>
+<small id="limit-help">Uma entrega no limite conta como dentro do prazo.</small><p id="warn" role="alert"></p>
+<div class="scroll"><table><thead><tr><th>Sala</th><th>Recebidas</th><th>No prazo</th><th>Acima do limite</th><th>Conferir relógio</th><th>Atraso mediano</th><th>Maior atraso</th></tr></thead><tbody id="summary"></tbody></table></div>
+<small>Selecione uma sala para ver suas entregas. Horários de medição posteriores ao recebimento ficam fora da mediana e do máximo.</small></section>
+<section class="panel" aria-labelledby="room-title"><div class="top"><h2 id="room-title" tabindex="-1">Entregas da sala</h2><button id="detail-csv" disabled>Exportar entregas CSV</button></div>
+<p id="details-status" class="meta" role="status"></p>
+<div class="scroll"><table><thead><tr><th>Recebido em (UTC)</th><th>Medido em (UTC)</th><th>Atraso</th><th>Situação</th><th>ID da medição</th></tr></thead><tbody id="details"></tbody></table></div>
+<div class="bottom"><div class="page-nav"><button id="prev" disabled>Anterior</button><small id="pagination"></small><button id="next" disabled>Próxima</button></div></div></section>
+<noscript>Ative o JavaScript para consultar as entregas e exportar o CSV.</noscript></main>
+<script type="application/json" id="bootstrap"><!--APP_DATA--></script><script><!--APP_SCRIPT--></script></body></html>

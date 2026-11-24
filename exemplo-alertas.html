@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telemetria Local · Monitor ambiental</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f2f4ed;color:#1d3329;font:16px/1.5 "Segoe UI",Roboto,sans-serif}
+header{background:#153c32;color:#fff}header>div,main{width:min(1100px,92%);margin:auto}
+header>div{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:15px 0}
+header>div,header nav{flex-wrap:wrap}header nav{display:flex;gap:.35rem 1rem}header nav a{color:#fff}
+header strong{letter-spacing:.04em}header span{font-size:.85rem;color:#d7eadf}
+main{padding:2rem 0 3rem}h1{font-size:clamp(2rem,5vw,3.25rem);line-height:1.05;letter-spacing:-.05em;margin:0}
+h2{font-size:1.15rem;margin:0}.contact{color:#4d6456;margin:.65rem 0 1.7rem}
+.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.cards article,.panel{border:1px solid #cfdbd1;border-radius:12px;background:#fff;padding:1.2rem}
+.cards h2{font-size:.9rem;font-weight:600;color:#486050}.cards strong{display:inline-block;font-size:clamp(1.5rem,4vw,2.55rem);letter-spacing:-.05em;font-variant-numeric:tabular-nums}
+small{color:#54675a}.panel{margin-top:15px}.panel>div:first-child{display:flex;align-items:baseline;justify-content:space-between;gap:.7rem;flex-wrap:wrap}
+canvas{display:block;width:100%;height:185px;margin-top:12px}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}
+td,th{text-align:left;padding:.72rem .5rem;border-bottom:1px solid #e0e7df;white-space:nowrap}thead th{font-size:.78rem;color:#506357}tbody th{font-weight:600}
+@media(max-width:580px){main{width:94%;padding-top:1.35rem}.cards{gap:5px}.cards article{padding:.65rem}.cards h2{font-size:.77rem}.panel{padding:.8rem}}
+.status{display:inline-block;padding:.16rem .55rem;border-radius:5px;font-weight:650}
+.offline{background:#fae0cf;color:#81370e}.online{background:#dff0e5;color:#18573b}.unknown,.waiting,.never{background:#eeebdf;color:#55492e}
+.aberta{background:#fae0cf;color:#81370e}.recuperada{background:#dff0e5;color:#18573b}.lacuna{background:#eeebdf;color:#55492e}
+details{margin-top:.8rem}summary{cursor:pointer;color:#315342;font-weight:600}details ul{padding-left:1.2rem}
+</style></head><body>
+<header><div><strong>Telemetria Local</strong><span>Demonstração · Sensor simulado</span></div></header>
+<main><h1>Monitor ambiental</h1><p class="contact">sala-01 · Último recebimento em 19/11/2026 00:39:15,67515 UTC</p>
+<section class="cards" aria-label="Indicadores">
+<article><h2>Temperatura</h2><strong>25,50</strong> °C</article>
+<article><h2>Umidade</h2><strong>56,59</strong> %</article>
+<article><h2>Leituras únicas</h2><strong>33</strong></article></section>
+<section class="panel"><div><h2>Evolução da temperatura</h2><small>sala-01 · máxima por instante · °C · UTC</small></div>
+<canvas id="trend" role="img" aria-label="Temperatura máxima dos últimos 60 instantes distintos de medição do sensor."></canvas></section>
+<section class="panel" id="comunicacao"><div><h2>Comunicação dos sensores</h2><small>Observado até 19/11/2026 00:39:14,977425 UTC</small></div>
+<div class="scroll"><table><thead><tr><th>Sensor</th><th>Situação observada</th><th>Último sinal na central (UTC)</th><th>Atualidade da medição</th><th>Última medição válida observada (UTC)</th></tr></thead><tbody><tr><th scope="row">sala-01</th><td><span class="status never">Sem sinal registrado</span></td><td>—</td><td>Sem observação da central</td><td>15/01/2026 14:07:10</td></tr></tbody></table></div>
+<h3>Interrupções e retomadas</h3><small>Horários da central em UTC · duração a partir da detecção · abertas e 50 últimas finalizadas</small>
+<div class="scroll"><table><thead><tr><th>Sensor</th><th>Resultado</th><th>Último sinal nesta janela</th><th>Detecção</th><th>Fim</th><th>Duração observada</th></tr></thead><tbody><tr><td colspan="6">Nenhuma interrupção registrada.</td></tr></tbody></table></div>
+<details><summary>Períodos sem observação da central</summary><ul><li>19/11/2026 00:39:14,977425 UTC até nova observação</li></ul></details></section>
+<section class="panel" id="ocorrencias"><div><h2>Ocorrências de temperatura</h2><small>Horários de medição em UTC</small></div>
+<p><small>Todas as abertas e as 50 últimas finalizadas. Na falta de medições, a duração vai até a última observação.</small></p>
+<div class="scroll"><table><thead><tr><th>Sensor</th><th>Situação</th><th>Início</th><th>Fim ou última medição</th><th>Duração observada</th><th>Pico</th></tr></thead><tbody><tr><th scope="row">sala-01</th><td><span class="status recuperada">Recuperada</span></td><td>15/01/2026 14:02:00</td><td>15/01/2026 14:07:00</td><td>5 min</td><td>31,40 °C</td></tr></tbody></table></div>
+<details><summary>Regras por sensor</summary><div class="scroll"><table><thead><tr><th>Sensor</th><th>Alta em 3 medições</th><th>Recuperação</th><th>Intervalo máximo</th><th>Última medição (UTC)</th></tr></thead><tbody><tr><th scope="row">sala-01</th><td>28,00 °C</td><td>26,00 °C</td><td>10 s</td><td>15/01/2026 14:07:10</td></tr></tbody></table></div></details>
+<details><summary>Lacunas entre medições · 0 exibidas</summary><small>Até 20 intervalos recentes.</small><ul><li>Nenhuma lacuna entre medições.</li></ul></details>
+</section>
+<section class="panel"><div><h2>Histórico de leituras</h2><small>Até 60 medições recentes · horários em UTC</small></div><div class="scroll">
+<table><thead><tr><th>Sensor</th><th>Medido em</th><th>Temperatura</th><th>Umidade</th><th>Recebido em</th></tr></thead><tbody><tr><th scope="row">sala-01</th><td>15/01/2026 14:07:10</td><td>25,50 °C</td><td>56,59 %</td><td>19/11/2026 00:39:15,600695</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:07:00</td><td>26,00 °C</td><td>55,17 %</td><td>19/11/2026 00:39:15,578371</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:06:50</td><td>27,20 °C</td><td>53,59 %</td><td>19/11/2026 00:39:15,549765</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:06:40</td><td>27,20 °C</td><td>51,94 %</td><td>19/11/2026 00:39:15,530425</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:06:30</td><td>27,20 °C</td><td>50,28 %</td><td>19/11/2026 00:39:15,506408</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:06:20</td><td>27,20 °C</td><td>48,72 %</td><td>19/11/2026 00:39:15,482295</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:06:10</td><td>27,20 °C</td><td>47,31 %</td><td>19/11/2026 00:39:15,455078</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:06:00</td><td>27,20 °C</td><td>46,14 %</td><td>19/11/2026 00:39:15,430505</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:05:50</td><td>29,00 °C</td><td>45,25 %</td><td>19/11/2026 00:39:15,403491</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:05:40</td><td>29,00 °C</td><td>44,70 %</td><td>19/11/2026 00:39:15,380333</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:05:30</td><td>29,00 °C</td><td>44,50 %</td><td>19/11/2026 00:39:15,351495</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:05:20</td><td>29,00 °C</td><td>44,67 %</td><td>19/11/2026 00:39:15,328929</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:05:10</td><td>29,00 °C</td><td>45,21 %</td><td>19/11/2026 00:39:15,275526</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:05:00</td><td>29,00 °C</td><td>46,07 %</td><td>19/11/2026 00:39:15,253168</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:04:50</td><td>29,00 °C</td><td>47,23 %</td><td>19/11/2026 00:39:15,233063</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:04:40</td><td>29,00 °C</td><td>48,63 %</td><td>19/11/2026 00:39:15,215553</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:04:30</td><td>29,00 °C</td><td>50,19 %</td><td>19/11/2026 00:39:15,201088</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:04:20</td><td>29,00 °C</td><td>51,84 %</td><td>19/11/2026 00:39:15,185577</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:04:10</td><td>29,00 °C</td><td>53,49 %</td><td>19/11/2026 00:39:15,170737</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:04:00</td><td>29,00 °C</td><td>55,08 %</td><td>19/11/2026 00:39:15,156083</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:03:50</td><td>29,00 °C</td><td>56,51 %</td><td>19/11/2026 00:39:15,140068</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:03:40</td><td>29,00 °C</td><td>57,72 %</td><td>19/11/2026 00:39:15,122512</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:03:30</td><td>31,40 °C</td><td>58,65 %</td><td>19/11/2026 00:39:15,652093</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:03:20</td><td>29,00 °C</td><td>59,25 %</td><td>19/11/2026 00:39:15,107102</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:03:10</td><td>29,00 °C</td><td>59,49 %</td><td>19/11/2026 00:39:15,092198</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:03:00</td><td>29,00 °C</td><td>59,37 %</td><td>19/11/2026 00:39:15,075689</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:02:50</td><td>29,00 °C</td><td>58,89 %</td><td>19/11/2026 00:39:15,063169</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:02:40</td><td>29,00 °C</td><td>58,06 %</td><td>19/11/2026 00:39:15,050072</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:02:30</td><td>29,00 °C</td><td>56,94 %</td><td>19/11/2026 00:39:15,034512</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:02:20</td><td>29,00 °C</td><td>55,58 %</td><td>19/11/2026 00:39:15,01941</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:02:10</td><td>29,00 °C</td><td>54,03 %</td><td>19/11/2026 00:39:15,003206</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:02:00</td><td>28,00 °C</td><td>52,39 %</td><td>19/11/2026 00:39:15,67515</td></tr><tr><th scope="row">sala-01</th><td>15/01/2026 14:01:50</td><td>25,50 °C</td><td>50,73 %</td><td>19/11/2026 00:39:14,987698</td></tr></tbody></table></div></section>
+</main><script>
+const points = [[1768485710.0, 25.5], [1768485720.0, 28.0], [1768485730.0, 29.0], [1768485740.0, 29.0], [1768485750.0, 29.0], [1768485760.0, 29.0], [1768485770.0, 29.0], [1768485780.0, 29.0], [1768485790.0, 29.0], [1768485800.0, 29.0], [1768485810.0, 31.4], [1768485820.0, 29.0], [1768485830.0, 29.0], [1768485840.0, 29.0], [1768485850.0, 29.0], [1768485860.0, 29.0], [1768485870.0, 29.0], [1768485880.0, 29.0], [1768485890.0, 29.0], [1768485900.0, 29.0], [1768485910.0, 29.0], [1768485920.0, 29.0], [1768485930.0, 29.0], [1768485940.0, 29.0], [1768485950.0, 29.0], [1768485960.0, 27.2], [1768485970.0, 27.2], [1768485980.0, 27.2], [1768485990.0, 27.2], [1768486000.0, 27.2], [1768486010.0, 27.2], [1768486020.0, 26.0], [1768486030.0, 25.5]];
+const chart = document.getElementById("trend");
+function draw() {
+  const w=chart.clientWidth, h=185, ratio=window.devicePixelRatio || 1;
+  chart.width=w*ratio; chart.height=h*ratio;
+  const ctx=chart.getContext("2d"); ctx.scale(ratio,ratio); ctx.font="12px system-ui";
+  if (!points.length) {ctx.fillStyle="#506357";ctx.fillText("Aguardando medições",12,56);return;}
+  const left=46, right=w-16, top=14, bottom=h-30;
+  const values=points.map(p=>p[1]), low=Math.floor(Math.min(...values))-0.5, high=Math.ceil(Math.max(...values))+0.5;
+  const first=points[0][0], last=points[points.length-1][0];
+  const x=t=> last===first ? (left+right)/2 : left+(t-first)*(right-left)/(last-first);
+  const y=v=> bottom-(v-low)*(bottom-top)/(high-low);
+  for(let i=0;i<=2;i++){const v=low+(high-low)*i/2; ctx.strokeStyle="#d9e3db";ctx.beginPath();ctx.moveTo(left,y(v));ctx.lineTo(right,y(v));ctx.stroke();
+    ctx.fillStyle="#4d6456";ctx.fillText(v.toFixed(1).replace(".",","),3,y(v)+4);}
+  ctx.strokeStyle="#08745c";ctx.lineWidth=2.3;ctx.beginPath();
+  points.forEach(([t,v],i)=>{if(i===0)ctx.moveTo(x(t),y(v));else ctx.lineTo(x(t),y(v));});ctx.stroke();
+  ctx.fillStyle="#08745c";points.forEach(([t,v])=>{ctx.beginPath();ctx.arc(x(t),y(v),2.8,0,Math.PI*2);ctx.fill();});
+  const time=t=>new Date(t*1000).toISOString().slice(11,19);ctx.fillStyle="#4d6456";ctx.fillText(time(first),left,h-5);
+  if(first!==last){ctx.textAlign="right";ctx.fillText(time(last),right,h-5);}
+}
+draw();window.addEventListener("resize",draw);
+</script></body></html>

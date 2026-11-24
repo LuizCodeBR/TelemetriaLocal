@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>Atualidade das medições · Telemetria Local</title>
+<style><!--APP_STYLE-->
+#step-description{min-height:2.4em}.stale{color:#984519;font-weight:700}.current{color:#12634c;font-weight:700}
+#trace{padding-left:1.3rem}#trace li{margin:.5rem 0;overflow-wrap:anywhere}#event-title:focus{outline-offset:4px}
+#maintenance-list{padding-left:1.3rem;overflow-wrap:anywhere}#maintenance-total{font-variant-numeric:tabular-nums}
+#demo button{margin:.25rem .35rem .25rem 0}#events button[aria-pressed=true]{font-weight:700}
+</style></head><body><header><div><strong>Telemetria Local</strong><a href="/" id="home" hidden>Monitor ao vivo</a><span id="offline" hidden>Demonstração offline</span></div></header>
+<main><h1>Atualidade das medições</h1><p class="sub">Compare a última presença de cada sala com o horário em que a temperatura foi medida. Horários em UTC.</p>
+<section class="panel" id="demo" hidden><h2>Ensaio com duas salas</h2>
+<p id="step-description" role="status"></p><button class="primary" id="advance">Avançar</button><button id="restart">Reiniciar ensaio</button></section>
+<section class="panel"><div class="top"><h2>Condição das salas</h2><div class="filters"><label>Sala<select id="room"><option value="">Todas as salas</option></select></label><button id="refresh">Atualizar</button></div></div>
+<p class="meta" id="asof"></p><div class="scroll"><table><thead><tr><th>Sala</th><th>Comunicação</th><th>Última presença (UTC)</th><th>Medição</th><th>Última medição válida observada (UTC)</th><th>Limite</th><th>Manutenção em andamento</th></tr></thead><tbody id="current"></tbody></table></div></section>
+<section class="panel"><h2>Histórico de desatualização</h2><p class="meta" id="scope"></p>
+<div class="scroll"><table><thead><tr><th>Sala</th><th>Detecção (UTC)</th><th>Resultado</th><th>Fim ou última observação (UTC)</th><th>Limite na detecção</th></tr></thead><tbody id="events"></tbody></table></div></section>
+<section class="panel" id="detail" hidden><h2 tabindex="-1" id="event-title"></h2><ol id="trace"></ol>
+<h3>Manutenção durante a ocorrência</h3><ul id="maintenance-list"></ul><p id="maintenance-total"></p></section>
+<a href="/historico" id="history" hidden>Consultar o gráfico por sala e período</a><p id="message" role="alert"></p><noscript>Ative o JavaScript para consultar as salas e o histórico.</noscript>
+</main><script type="application/json" id="bootstrap"><!--APP_DATA--></script><script><!--APP_SCRIPT--></script></body></html>

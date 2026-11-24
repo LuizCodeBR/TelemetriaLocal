@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>Histórico por sensor · Telemetria Local</title>
+<style><!--APP_STYLE--></style></head><body>
+<header><div><strong>Telemetria Local</strong><a id="home" href="/" hidden>Monitor ao vivo</a><span id="offline" hidden>Demonstração offline</span></div></header>
+<main><h1>Histórico por sensor</h1><p class="sub">Temperatura e comunicação ao longo do tempo. Todos os horários em UTC.</p>
+<section class="panel" aria-label="Filtros"><form id="filters" class="filters">
+<label>Sensor<select id="sensor"></select></label><label>Período<select id="preset"><option value="1">Última hora</option><option value="24">Últimas 24 horas</option><option value="custom">Personalizado</option></select></label>
+<label class="date">Início (UTC)<input id="start" type="datetime-local" step="any"></label>
+<label class="date">Fim exclusivo (UTC)<input id="end" type="datetime-local" step="any"></label>
+<button id="apply" class="primary">Aplicar</button></form><p id="message" role="alert"></p></section>
+<section class="panel" aria-labelledby="availability-title">
+<div class="top"><h2 id="availability-title">Disponibilidade de comunicação</h2><button id="availability-csv" disabled>Exportar resumo CSV</button></div>
+<p class="meta" id="availability-period" role="status"></p>
+<p><small>Disponibilidade = tempo em comunicação ÷ tempo avaliado. Selecione uma sala para abrir o histórico no mesmo período.</small></p>
+<div class="scroll"><table><thead><tr><th scope="col">Sala</th><th scope="col">Disponibilidade</th><th scope="col">Avaliado</th><th scope="col">Em comunicação</th><th scope="col">Em interrupção</th><th scope="col">Maior interrupção</th><th scope="col">Central sem observação</th><th scope="col">Evidência insuficiente</th><th scope="col">Interrupção em manutenção</th><th scope="col">Interrupção fora da manutenção</th></tr></thead><tbody id="availability-rows"></tbody></table></div>
+<small>As duas últimas colunas dividem a interrupção observada. Uma manutenção pode transcorrer com o sensor em comunicação. Central sem observação indica uma pausa registrada. Evidência insuficiente inclui o tempo antes do primeiro sinal ou fora da cobertura conhecida.</small>
+</section>
+<section class="panel"><div class="top"><div><h2 id="chart-title" tabindex="-1">Temperatura e comunicação</h2><p id="result" role="status"></p></div><button id="csv" disabled>Exportar CSV</button></div>
+<div class="legend" aria-label="Legenda"><span><i class="key temp"></i>Temperatura (°C)</span><span><i class="key down"></i>Interrupção do sensor</span><span><i class="key up"></i>Retomada</span><span><i class="key" style="background:#68529a"></i>Manutenção programada</span><span><i class="key blind"></i>Central sem observação</span><span><i class="key" style="background:#9e4422"></i>Medição desatualizada</span></div>
+<canvas id="chart" role="img" aria-label="Temperaturas nos horários de medição e eventos no mesmo eixo UTC. Dados nas tabelas abaixo."></canvas>
+<p id="detail" role="status" hidden></p><button id="next-point" type="button" hidden>Próxima medição deste ponto</button></section>
+<section class="panel"><h2>Eventos da sala</h2><small>O gráfico recorta as faixas no período escolhido. A tabela preserva os horários originais.</small><div class="scroll"><table><thead><tr><th>Evento</th><th>Início (UTC)</th><th>Fim ou última observação (UTC)</th></tr></thead><tbody id="events"></tbody></table></div></section>
+<section class="panel"><h2>Medições</h2><div class="scroll"><table><thead><tr><th>Medido em (UTC)</th><th>Temperatura (°C)</th><th>Umidade (%)</th><th>Recebido em (UTC)</th></tr></thead><tbody id="readings"></tbody></table></div>
+<div class="bottom"><small>Selecione uma medição para ver o detalhe.</small><div class="page-nav"><button id="prev" disabled>Anterior</button><small id="pagination"></small><button id="next" disabled>Próxima</button></div></div></section>
+<noscript>Ative o JavaScript do navegador para consultar os dados e exportar o CSV.</noscript></main>
+<script type="application/json" id="bootstrap"><!--APP_DATA--></script><script><!--APP_SCRIPT--></script></body></html>

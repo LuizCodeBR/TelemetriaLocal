@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>Incidentes de comunicação · Telemetria Local</title>
+<style><!--APP_STYLE-->
+section h2{margin-bottom:.4rem}.checks{display:flex;align-items:center;gap:.4rem}.checks input{min-height:0}
+#stream{padding-left:1.35rem}#stream li{padding:.3rem 0;overflow-wrap:anywhere;white-space:pre-wrap}
+#stream time{font-variant-numeric:tabular-nums;color:var(--muted);display:block;font-size:.83rem}
+textarea{font:inherit;width:100%;padding:.6rem;border:1px solid #96ada2;border-radius:6px;resize:vertical}
+#note-form{max-width:48rem;margin-top:1rem}#note-form button{margin-top:.5rem}#deliveries{color:var(--brand)}
+#events button[aria-pressed="true"]{font-weight:700}#demo-box button{margin:.3rem .4rem .2rem 0}
+@media(max-width:600px){.filters .checks{width:auto}.filters{align-items:center}}
+</style></head><body>
+<header><div><strong>Telemetria Local</strong><a id="home" href="/" hidden>Monitor ao vivo</a><span id="offline" hidden>Demonstração offline</span></div></header>
+<main><h1>Incidentes de comunicação</h1><p class="sub">Acompanhe as quedas de sinal por sala e registre as ações do operador. Horários em UTC.</p>
+<section class="panel" id="demo-box" hidden><h2>Simulação da sala-01</h2><p>Marque a queda como vista, escreva uma nota e avance até a retomada. Reabrir o arquivo reinicia o ensaio.</p>
+<button id="advance">Simular retomada às 14:00:32</button><button id="restart">Reiniciar demonstração</button></section>
+<section class="panel"><h2>Ocorrências</h2><div class="filters">
+<label>Sala<select id="room"><option value="">Todas as salas</option></select></label>
+<label class="checks"><input type="checkbox" id="open">Em aberto</label>
+<label class="checks"><input type="checkbox" id="unseen">Ainda não vistas</label>
+<button id="refresh">Atualizar</button></div>
+<p id="list-status" class="meta" role="status"></p><div class="scroll"><table><thead><tr><th>Sala</th><th>Detecção (UTC)</th><th>Comunicação</th><th>Operador</th></tr></thead><tbody id="events"></tbody></table></div></section>
+<section class="panel" id="detail-panel" hidden><div class="top"><h2 id="title" tabindex="-1">Detalhe</h2><button class="primary" id="seen">Marcar como visto</button></div>
+<p id="facts"></p><a id="deliveries" hidden>Consultar entregas da sala até um minuto após a retomada</a>
+<h2>Linha do tempo</h2><p id="timing" class="meta" hidden></p><ol id="stream"></ol><div id="planned-context" hidden><h3>Manutenção no intervalo da ocorrência</h3><ul id="planned-windows"></ul><p id="planned-summary"></p></div>
+<form id="note-form"><label for="note">Nota do operador</label><textarea id="note" rows="3" maxlength="1000" placeholder="Registre o que foi verificado."></textarea>
+<button id="save">Adicionar nota</button></form></section>
+<p id="feedback" role="status"></p><p id="message" role="alert"></p>
+<noscript>Ative o JavaScript para acompanhar os incidentes.</noscript></main>
+<script type="application/json" id="bootstrap"><!--APP_DATA--></script><script><!--APP_SCRIPT--></script></body></html>

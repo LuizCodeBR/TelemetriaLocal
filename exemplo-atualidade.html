@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light"><title>Atualidade das medições · Telemetria Local</title>
+<style>:root{--ink:#18372f;--muted:#49635a;--line:#cedbd3;--paper:#fff;--brand:#00674f;--bg:#f2f5f0;--outage:#f5ddca;--blind:#e1e5e7;color:var(--ink);background:var(--bg);font:16px/1.5 "Segoe UI",Roboto,sans-serif}
+*{box-sizing:border-box}body{margin:0}header{background:#163a32;color:white}header>div,main{width:min(1110px,92%);margin:auto}header>div{display:flex;justify-content:space-between;align-items:center;min-height:54px;gap:1rem}header strong{letter-spacing:.03em}header a{color:#e0f1e9}main{padding:clamp(1.2rem,4vw,3rem) 0 3rem}
+h1{font-size:clamp(2rem,5vw,3.2rem);letter-spacing:-.055em;line-height:1.08;margin:0}h2{font-size:1.14rem;margin:0}p{margin:.4rem 0}.sub,small,.legend,#result,.meta{color:var(--muted)}.sub{margin:.45rem 0 1.6rem}.panel{background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:clamp(.82rem,2.4vw,1.45rem);margin:.85rem 0}.filters{display:flex;flex-wrap:wrap;align-items:end;gap:.75rem}label{display:grid;gap:.22rem;font-weight:650;font-size:.83rem}input,select,button{font:inherit;border:1px solid #96ada2;border-radius:6px;background:#fff;color:var(--ink);padding:.48rem .68rem;min-height:40px}input,select{max-width:100%;min-width:0}button{cursor:pointer;font-weight:600}button.primary{background:var(--brand);border-color:var(--brand);color:white}button:disabled{opacity:.55;cursor:default}:focus-visible{outline:3px solid #187bba;outline-offset:2px}
+.top,.bottom{display:flex;justify-content:space-between;align-items:center;gap:.75rem;flex-wrap:wrap}.legend{display:flex;flex-wrap:wrap;gap:.45rem 1.05rem;font-size:.83rem;margin:.65rem 0}.key{display:inline-block;vertical-align:middle;width:.85rem;height:.7rem;margin-right:.32rem;border-radius:2px}.temp{background:var(--brand);border-radius:100%;width:.57rem;height:.57rem}.down{background:var(--outage);border-left:2px solid #a94a10}.blind{background:repeating-linear-gradient(135deg,#dce1e5 0 3px,#87969b 3px 4px)}.up{width:.65rem;border-left:3px dashed #13644b}
+canvas{display:block;width:100%;height:245px;cursor:crosshair}.scroll{overflow-x:auto}table{width:100%;border-collapse:collapse;font-size:.88rem;font-variant-numeric:tabular-nums}td,th{white-space:nowrap;text-align:left;padding:.55rem .5rem;border-bottom:1px solid #e1e8e2}thead th{color:var(--muted);font-size:.8rem}.reading{min-height:0;color:var(--brand);background:none;border:none;padding:.18rem 0;text-decoration:underline;text-underline-offset:3px}.bottom{margin-top:.75rem}#detail{background:#f1f7f3;border-left:3px solid var(--brand);padding:.55rem .8rem}#message{color:#913f19;font-weight:600}#message:empty{display:none}[hidden]{display:none!important}#result{font-size:.91rem}.page-nav{display:flex;align-items:center;gap:.55rem}
+@media(max-width:600px){main,header>div{width:94%}.filters>label{width:calc(50% - .4rem)}.filters .date{width:100%}.filters .primary{flex:1}canvas{height:205px}.panel{border-radius:9px}.sub{margin-bottom:1rem}header>div{font-size:.89rem}}
+
+#step-description{min-height:2.4em}.stale{color:#984519;font-weight:700}.current{color:#12634c;font-weight:700}
+#trace{padding-left:1.3rem}#trace li{margin:.5rem 0;overflow-wrap:anywhere}#event-title:focus{outline-offset:4px}
+#maintenance-list{padding-left:1.3rem;overflow-wrap:anywhere}#maintenance-total{font-variant-numeric:tabular-nums}
+#demo button{margin:.25rem .35rem .25rem 0}#events button[aria-pressed=true]{font-weight:700}
+</style></head><body><header><div><strong>Telemetria Local</strong><a href="/" id="home" hidden>Monitor ao vivo</a><span id="offline" hidden>Demonstração offline</span></div></header>
+<main><h1>Atualidade das medições</h1><p class="sub">Compare a última presença de cada sala com o horário em que a temperatura foi medida. Horários em UTC.</p>
+<section class="panel" id="demo" hidden><h2>Ensaio com duas salas</h2>
+<p id="step-description" role="status"></p><button class="primary" id="advance">Avançar</button><button id="restart">Reiniciar ensaio</button></section>
+<section class="panel"><div class="top"><h2>Condição das salas</h2><div class="filters"><label>Sala<select id="room"><option value="">Todas as salas</option></select></label><button id="refresh">Atualizar</button></div></div>
+<p class="meta" id="asof"></p><div class="scroll"><table><thead><tr><th>Sala</th><th>Comunicação</th><th>Última presença (UTC)</th><th>Medição</th><th>Última medição válida observada (UTC)</th><th>Limite</th><th>Manutenção em andamento</th></tr></thead><tbody id="current"></tbody></table></div></section>
+<section class="panel"><h2>Histórico de desatualização</h2><p class="meta" id="scope"></p>
+<div class="scroll"><table><thead><tr><th>Sala</th><th>Detecção (UTC)</th><th>Resultado</th><th>Fim ou última observação (UTC)</th><th>Limite na detecção</th></tr></thead><tbody id="events"></tbody></table></div></section>
+<section class="panel" id="detail" hidden><h2 tabindex="-1" id="event-title"></h2><ol id="trace"></ol>
+<h3>Manutenção durante a ocorrência</h3><ul id="maintenance-list"></ul><p id="maintenance-total"></p></section>
+<a href="/historico" id="history" hidden>Consultar o gráfico por sala e período</a><p id="message" role="alert"></p><noscript>Ative o JavaScript para consultar as salas e o histórico.</noscript>
+</main><script type="application/json" id="bootstrap">{"states": {"atualizada": "Medição atualizada", "desatualizada": "Medição desatualizada", "aguardando": "Aguardando medição atual", "sem_observacao": "Sem observação da central"}, "communication": {"online": "Em comunicação", "offline": "Sem comunicação", "waiting": "Aguardando sinal", "unknown": "Sem observação", "never": "Sem sinal registrado"}, "example": [{"description": "14h20min00s · As duas salas respondem e entregam medições de 24 °C. A sala-01 está em manutenção.", "report": {"rooms": ["sala-01", "sala-02"], "current": [{"sensor": "sala-01", "last_contact": "2026-01-15T14:20:00.000000+00:00", "state": "online", "freshness": "atualizada", "measured": "2026-01-15T14:20:00.000000+00:00", "checked": "2026-01-15T14:20:00.000000+00:00", "threshold": 10.0, "maintenance": {"sensor": "sala-01", "end": "2026-01-15T14:20:20.000000+00:00", "reason": "Troca de bateria"}}, {"sensor": "sala-02", "last_contact": "2026-01-15T14:20:00.000000+00:00", "state": "online", "freshness": "atualizada", "measured": "2026-01-15T14:20:00.000000+00:00", "checked": "2026-01-15T14:20:00.000000+00:00", "threshold": 10.0, "maintenance": null}], "events": [], "seen": "2026-01-15T14:20:00.000000+00:00"}}, {"description": "14h20min15s · A sala-01 continua respondendo. Sua última medição tem 15 s e o limite é 10 s. A sala-02 continua medindo.", "report": {"rooms": ["sala-01", "sala-02"], "current": [{"sensor": "sala-01", "last_contact": "2026-01-15T14:20:15.000000+00:00", "state": "online", "freshness": "desatualizada", "measured": "2026-01-15T14:20:00.000000+00:00", "checked": "2026-01-15T14:20:15.000000+00:00", "threshold": 10.0, "maintenance": {"sensor": "sala-01", "end": "2026-01-15T14:20:20.000000+00:00", "reason": "Troca de bateria"}}, {"sensor": "sala-02", "last_contact": "2026-01-15T14:20:15.000000+00:00", "state": "online", "freshness": "atualizada", "measured": "2026-01-15T14:20:15.000000+00:00", "checked": "2026-01-15T14:20:15.000000+00:00", "threshold": 10.0, "maintenance": null}], "events": [{"id": 1, "sensor": "sala-01", "window_id": 1, "detected": "2026-01-15T14:20:15.000000+00:00", "threshold": 10.0, "baseline": "2026-01-15T14:20:00.000000+00:00", "ended": null, "outcome": null, "recovery_id": null, "recovery_measured": null, "recovery_received": null, "until": "2026-01-15T14:20:15.000000+00:00", "maintenance": [{"start": "2026-01-15T14:19:55.000000+00:00", "end": "2026-01-15T14:20:20.000000+00:00", "reason": "Troca de bateria"}]}], "seen": "2026-01-15T14:20:15.000000+00:00"}}, {"description": "14h20min20s · Chega à sala-01 a leitura das 14h19min50s, seguida de um reenvio idêntico. A manutenção termina e a ocorrência permanece aberta.", "report": {"rooms": ["sala-01", "sala-02"], "current": [{"sensor": "sala-01", "last_contact": "2026-01-15T14:20:20.000000+00:00", "state": "online", "freshness": "desatualizada", "measured": "2026-01-15T14:20:00.000000+00:00", "checked": "2026-01-15T14:20:20.000000+00:00", "threshold": 10.0, "maintenance": null}, {"sensor": "sala-02", "last_contact": "2026-01-15T14:20:20.000000+00:00", "state": "online", "freshness": "atualizada", "measured": "2026-01-15T14:20:20.000000+00:00", "checked": "2026-01-15T14:20:20.000000+00:00", "threshold": 10.0, "maintenance": null}], "events": [{"id": 1, "sensor": "sala-01", "window_id": 1, "detected": "2026-01-15T14:20:15.000000+00:00", "threshold": 10.0, "baseline": "2026-01-15T14:20:00.000000+00:00", "ended": null, "outcome": null, "recovery_id": null, "recovery_measured": null, "recovery_received": null, "until": "2026-01-15T14:20:20.000000+00:00", "maintenance": [{"start": "2026-01-15T14:19:55.000000+00:00", "end": "2026-01-15T14:20:20.000000+00:00", "reason": "Troca de bateria"}]}], "seen": "2026-01-15T14:20:20.000000+00:00"}}, {"description": "14h20min25s · A leitura das 14h20min24s chega à central. Ela também marca 24 °C e confirma a recuperação da sala-01.", "report": {"rooms": ["sala-01", "sala-02"], "current": [{"sensor": "sala-01", "last_contact": "2026-01-15T14:20:25.000000+00:00", "state": "online", "freshness": "atualizada", "measured": "2026-01-15T14:20:24.000000+00:00", "checked": "2026-01-15T14:20:25.000000+00:00", "threshold": 10.0, "maintenance": null}, {"sensor": "sala-02", "last_contact": "2026-01-15T14:20:25.000000+00:00", "state": "online", "freshness": "atualizada", "measured": "2026-01-15T14:20:25.000000+00:00", "checked": "2026-01-15T14:20:25.000000+00:00", "threshold": 10.0, "maintenance": null}], "events": [{"id": 1, "sensor": "sala-01", "window_id": 1, "detected": "2026-01-15T14:20:15.000000+00:00", "threshold": 10.0, "baseline": "2026-01-15T14:20:00.000000+00:00", "ended": "2026-01-15T14:20:25.000000+00:00", "outcome": "atualizada", "recovery_id": "00000000000000000000000000000003", "recovery_measured": "2026-01-15T14:20:24.000000+00:00", "recovery_received": "2026-01-15T14:20:25.000000+00:00", "until": "2026-01-15T14:20:25.000000+00:00", "maintenance": [{"start": "2026-01-15T14:19:55.000000+00:00", "end": "2026-01-15T14:20:20.000000+00:00", "reason": "Troca de bateria"}]}], "seen": "2026-01-15T14:20:25.000000+00:00"}}]}</script><script>"use strict";
+const el = id => document.getElementById(id);
+
+function utcInput(value) {
+  if (!/^\d{4}-\d\d-\d\dT\d\d:\d\d(:\d\d(\.\d{1,6})?)?$/.test(value) || value.startsWith("0000")) {
+    throw new Error("Informe uma data e hora válida em UTC.");
+  }
+  const [whole, fraction = ""] = value.split(".");
+  return (whole.length === 16 ? whole + ":00" : whole) + "." + fraction.padEnd(6, "0") + "+00:00";
+}
+function wholeMillis(iso) {
+  return Date.parse(iso.slice(0,23) + "Z");
+}
+function labelTime(iso) {
+  const [date, hour] = iso.split("T");
+  const time = hour.split("+")[0].replace(/0+$/, "").replace(/\.$/, "");
+  return date.split("-").reverse().join("/") + " " + time;
+}
+function showRange(start, end) {
+  el("start").value = start.slice(0,23);
+  el("end").value = end.slice(0,23);
+}
+
+function addCells(body, values) {
+  const row = body.insertRow();
+  for (const value of values) {
+    const cell = row.insertCell();
+    if (value instanceof Node) cell.append(value);
+    else cell.textContent = value;
+  }
+}
+function emptyRow(body, count, message) {
+  const cell = body.insertRow().insertCell();
+  cell.colSpan = count;
+  cell.textContent = message;
+}
+
+function safeSensor(name) {
+  return name.startsWith("-") ? "'" + name : name;
+}
+function csvBlob(header, records) {
+  const parts = ["\uFEFF"];
+  let lines = [header];
+  function flush() {
+    parts.push(lines.map(line => line.map(cell => '"' + cell.replace(/"/g,'""') + '"').join(";")).join("\r\n") + "\r\n");
+    lines = [];
+  }
+  for (const record of records) {
+    lines.push(record);
+    if (lines.length === 1024) flush();
+  }
+  if (lines.length) flush();
+  return new Blob(parts, {type:"text/csv;charset=utf-8"});
+}
+function downloadCsv(header, records, prefix, period) {
+  const url = URL.createObjectURL(csvBlob(header, records));
+  const a = document.createElement("a");
+  const fileTime = iso => iso.slice(0,26).replaceAll(":","-") + "Z";
+  a.href = url; a.download = prefix + "_" + fileTime(period.start) + "_" + fileTime(period.end) + ".csv";
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+function micros(iso) {
+  return BigInt(wholeMillis(iso))*1000n + BigInt(iso.slice(23,26));
+}
+// Os intervalos de cada lista são ordenados e não se sobrepõem. O fim é exclusivo.
+function maintenanceOverlap(outages, windows, start, end) {
+  let total = 0n, i = 0, j = 0;
+  while (i < outages.length && j < windows.length) {
+    const [down, back] = outages[i], window = windows[j];
+    const left = [down, window.start, start].sort().at(-1);
+    const right = [back, window.end, end].sort()[0];
+    if (left < right) total += micros(right) - micros(left);
+    if (back <= window.end) i++;
+    else j++;
+  }
+  return total;
+}
+function seconds(us) {
+  const fraction = String(us % 1000000n).padStart(6,"0").replace(/0+$/, "");
+  return String(us / 1000000n) + (fraction ? "," + fraction : "");
+}
+
+"use strict";
+const boot = JSON.parse(el("bootstrap").textContent);
+const sample = boot.example;
+const outcomes = {atualizada:"Medição voltou a ser atual",sem_observacao:"Observação interrompida"};
+let step = 0, report = null, selected = null, generation = 0, loading = false;
+const time = value => value ? labelTime(value) : "—";
+const limit = value => String(value).replace(".",",") + " s";
+
+function renderDetail(event) {
+  el("detail").hidden = !event;
+  if (!event) return;
+  el("event-title").textContent = event.sensor + " · ocorrência " + event.id;
+  const trace = el("trace");
+  trace.replaceChildren();
+  function entry(text) {
+    const li = document.createElement("li"); li.textContent = text; trace.append(li);
+  }
+  entry(time(event.detected) + " UTC · Desatualização detectada. " +
+        (event.baseline ? "Última medição válida até então em " + time(event.baseline) + " UTC." : "Ainda sem medição válida.") +
+        " Limite de " + limit(event.threshold) + ".");
+  if (event.outcome === "atualizada") {
+    entry(time(event.ended) + " UTC · Recuperação confirmada pela leitura " + event.recovery_id +
+          ". Medida em " + time(event.recovery_measured) + " UTC e recebida em " + time(event.recovery_received) + " UTC.");
+  } else {
+    entry(time(event.until) + " UTC · " + (event.outcome ? "Último ponto observado antes da interrupção da central." :
+          "Última observação confirmada. A ocorrência está aberta."));
+  }
+  const list = el("maintenance-list");
+  list.replaceChildren();
+  for (const w of event.maintenance) {
+    const li = document.createElement("li");
+    li.textContent = time(w.start) + " a " + time(w.end) + " UTC · " + w.reason;
+    list.append(li);
+  }
+  const inside = maintenanceOverlap([[event.detected,event.until]],event.maintenance,event.detected,event.until);
+  const outside = micros(event.until) - micros(event.detected) - inside;
+  el("maintenance-total").textContent = seconds(inside) + " s em manutenção · " + seconds(outside) + " s fora da manutenção.";
+}
+function draw(data) {
+  report = data;
+  const room = el("room"), name = room.value;
+  if (JSON.stringify(Array.from(room.options,o=>o.value).slice(1)) !== JSON.stringify(data.rooms)) {
+    room.replaceChildren(new Option("Todas as salas",""),...data.rooms.map(s=>new Option(s,s)));
+    if (data.rooms.includes(name)) room.value = name;
+  }
+  const rows = data.current.filter(r=>!room.value || r.sensor === room.value);
+  const body = el("current"); body.replaceChildren();
+  for (const r of rows) {
+    const status = document.createElement("span");
+    status.textContent = boot.states[r.freshness];
+    status.className = r.freshness === "desatualizada" ? "stale" : r.freshness === "atualizada" ? "current" : "";
+    addCells(body,[r.sensor,boot.communication[r.state],time(r.last_contact),status,time(r.measured),
+                   limit(r.threshold),r.maintenance ? r.maintenance.reason + " · até " + time(r.maintenance.end) : "—"]);
+  }
+  if (!rows.length) emptyRow(body,7,"Aguardando sensores.");
+  el("asof").textContent = data.seen ? "Última verificação de presença · " + time(data.seen) + " UTC" : "Aguardando observação da central.";
+  const events = data.events.filter(e=>!room.value || e.sensor === room.value);
+  el("scope").textContent = room.value ? "Histórico completo da sala selecionada." : "Ocorrências abertas e as 50 últimas encerradas.";
+  const chosen = events.find(e=>e.id===selected) || events[0]; selected = chosen?.id;
+  const table = el("events"); table.replaceChildren();
+  for (const e of events) {
+    const link = document.createElement("button"); link.className="reading"; link.textContent=e.sensor;
+    link.setAttribute("aria-pressed",String(e.id===selected));
+    link.onclick=()=>{selected=e.id;draw(report);el("event-title").focus();};
+    addCells(table,[link,time(e.detected),outcomes[e.outcome] || "Em aberto",time(e.until),limit(e.threshold)]);
+  }
+  if (!events.length) emptyRow(table,5,"Nenhuma ocorrência neste histórico.");
+  renderDetail(chosen);
+}
+async function fetchRoom(room) {
+  const args = new URLSearchParams();
+  if (room) args.set("sala",room);
+  const response = await fetch("/api/atualidade?" + args,{cache:"no-store",signal:AbortSignal.timeout(30000)});
+  if (!response.ok) throw Error();
+  return response.json();
+}
+async function refresh() {
+  const turn = ++generation;
+  loading = true;
+  try {
+    if (sample) {
+      el("step-description").textContent=sample[step].description;
+      el("advance").disabled=step===sample.length-1;
+      draw(sample[step].report);
+    } else {
+      const room = el("room").value;
+      let data = await fetchRoom(room);
+      if (turn !== generation) return;
+      if (room && !data.rooms.includes(room)) {
+        data = await fetchRoom("");
+        if (turn !== generation) return;
+        el("room").value = "";
+      }
+      draw(data);
+    }
+    if (turn === generation) el("message").textContent="";
+  } catch {
+    if (turn === generation) el("message").textContent="Falha ao consultar a central. Use Atualizar para tentar novamente.";
+  } finally {
+    if (turn === generation) loading = false;
+  }
+}
+el("room").onchange=()=>{
+  selected=null;
+  if (!sample) {
+    el("current").replaceChildren(); el("events").replaceChildren();
+    emptyRow(el("current"),7,"Consultando a sala selecionada…");
+    emptyRow(el("events"),5,"Consultando o histórico…");
+    el("scope").textContent=el("asof").textContent="";
+    renderDetail(null);
+  }
+  refresh();
+};
+el("refresh").onclick=refresh;
+if (sample) {
+  el("demo").hidden=el("offline").hidden=false;el("refresh").hidden=true;
+  el("advance").onclick=()=>{if (step<sample.length-1) step++;refresh();};
+  el("restart").onclick=()=>{step=0;selected=null;el("room").value="";refresh();};
+} else {
+  el("home").hidden=el("history").hidden=false;
+  setInterval(()=>{if (!document.hidden && !loading) refresh();},5000);
+}
+refresh();
+</script></body></html>
